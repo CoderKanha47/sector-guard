@@ -33,7 +33,7 @@ export default function AboutModal({ onClose }: AboutModalProps) {
             <div>
               <p className="text-sm font-bold text-white">Automated Extraction</p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Receipt images are parsed into structured data — merchant, amount, category — with zero manual entry.
+                Receipt images are parsed into structured data. <br /> Merchant, amount and category data are automatically extracted via llama-4-scout-17b-16e-instruct
               </p>
             </div>
           </div>
@@ -45,7 +45,7 @@ export default function AboutModal({ onClose }: AboutModalProps) {
             <div>
               <p className="text-sm font-bold text-white">Fraud Detection</p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Catches policy violations, split-receipt abuse, and temporally impossible overlapping claims.
+                Catches policy violations, split-receipt abuse, and overlapping claims which can be tampared
               </p>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function AboutModal({ onClose }: AboutModalProps) {
             <div>
               <p className="text-sm font-bold text-white">Locked Monthly Payouts</p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Approved reimbursements are finalized into permanent monthly payout records — an immutable audit trail.
+                Approved reimbursements are finalized into permanent monthly payout records which cannot be changed.
               </p>
             </div>
           </div>
