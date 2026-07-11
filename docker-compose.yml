@@ -11,8 +11,8 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:sectorguard2026@db:5432/sector_guard_db?schema=public
-       - WATCHPACK_POLLING=true
-       - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     volumes:
       - .:/app
       - /app/node_modules

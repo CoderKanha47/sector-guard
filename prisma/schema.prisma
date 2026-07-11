@@ -1,68 +1,66 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
 model Employee {
-  id           String    @id @default(uuid())
-  name         String
-  department   String
-  designation  String    @default("Not Specified")
-  address      String    @default("Not Provided")
-  tierLimit    Float
-  rating       Float     @default(100)
-  expenses     Expense[]
-  payouts      MonthlyPayout[]
+  id          String          @id @default(uuid())
+  name        String
+  department  String
+  tierLimit   Float
+  address     String          @default("Not Provided")
+  designation String          @default("Not Specified")
+  rating      Float           @default(100)
+  expenses    Expense[]
+  payouts     MonthlyPayout[]
 }
 
 model Expense {
-  id          String    @id @default(uuid())
-  employeeId  String
-  merchant    String
-  amount      Float
-  currency    String    @default("INR")
-  timestamp   DateTime
-  category    String    // food, transport, lodging, etc.
-  lineItems   Json      // Stores the array of items for line-item compliance
-  createdAt   DateTime  @default(now())
-  
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  audit       Audit?
+  id         String   @id @default(uuid())
+  employeeId String
+  merchant   String
+  amount     Float
+  currency   String   @default("INR")
+  timestamp  DateTime
+  category   String
+  lineItems  Json
+  createdAt  DateTime @default(now())
+  audit      Audit?
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model Audit {
-  id                       String     @id @default(uuid())
-  expenseId                String     @unique
-  calculatedReimbursement  Float
-  riskScore                Int        // 0 to 100
-  status                   String     // "APPROVED", "FLAGGED", "DENIED"
-  
-  expense                  Expense    @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  anomalies                Anomaly[]
+  id                      String    @id @default(uuid())
+  expenseId               String    @unique
+  calculatedReimbursement Float
+  riskScore               Int
+  status                  String
+  anomalies               Anomaly[]
+  expense                 Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
 }
 
 model Anomaly {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   auditId     String
-  type        String   // "SPLIT_RECEIPT", "TEMPORAL_CONFLICT", "POLICY_VIOLATION"
+  type        String
   description String
-  severity    String   // "LOW", "MEDIUM", "HIGH"
-  
-  audit       Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  severity    String
+  audit       Audit  @relation(fields: [auditId], references: [id], onDelete: Cascade)
 }
-
 
 model MonthlyPayout {
   id                  String    @id @default(uuid())
   employeeId          String
   year                Int
-  month               Int       // 1-12
+  month               Int
+  totalClaimed        Float
   totalReimbursement  Float
+  categoryBreakdown   Json
   expenseCount        Int
-  status              String    @default("PENDING") // "PENDING", "PAID"
+  status              String    @default("PENDING")
   closedAt            DateTime  @default(now())
   paidAt              DateTime?
 
