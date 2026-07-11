@@ -19,11 +19,11 @@ export default function SectorGuardDashboard() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex font-sans antialiased overflow-x-hidden selection:bg-blue-500/30">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans antialiased overflow-x-hidden selection:bg-blue-500/30">
 
       {/* LEFT NAVIGATION SIDEBAR */}
-      <aside className="w-64 border-r border-white/5 bg-slate-900/40 backdrop-blur-xl p-6 flex flex-col justify-between shrink-0">
-        <div className="space-y-8">
+      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/5 bg-slate-900/40 backdrop-blur-xl p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-stretch shrink-0">
+        <div className="flex flex-row md:flex-col items-center md:items-stretch gap-4 md:gap-0 md:space-y-8">
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
               <Binary className="text-white w-5 h-5" />
@@ -36,7 +36,7 @@ export default function SectorGuardDashboard() {
             </div>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="flex flex-row md:flex-col gap-2 md:space-y-2 md:gap-0">
             <button
               onClick={() => handleTabChange('home')}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'home'
@@ -61,7 +61,7 @@ export default function SectorGuardDashboard() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3 px-2 border-t border-white/5 pt-4">
+        <div className="hidden md:flex items-center gap-3 px-2 border-t border-white/5 pt-4">
           <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center font-bold text-xs text-slate-300">
             A
           </div>

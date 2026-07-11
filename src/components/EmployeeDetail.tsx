@@ -472,7 +472,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {Object.entries(closeResult.categoryBreakdown as Record<string, number>).map(([bucket, amount]) => (
                 <div key={bucket} className="bg-white/5 rounded-lg p-2 text-center">
                   <span className="text-[9px] font-mono text-slate-500 uppercase block">{bucket}</span>
