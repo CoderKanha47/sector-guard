@@ -32,7 +32,7 @@ export default function SectorGuardDashboard() {
               <h2 className="font-black text-sm tracking-wider uppercase bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent">
                 Sector Guard
               </h2>
-              <span className="text-[10px] font-mono opacity-40">v1.0.4 // LOCAL AI</span>
+              <span className="text-[10px] font-mono opacity-40">v1.2 // WELCOME</span>
             </div>
           </div>
 
