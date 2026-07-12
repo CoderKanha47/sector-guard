@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Star, MapPin, Briefcase, Receipt, IndianRupee, Lock, Trash2, Pencil, Save, X } from 'lucide-react';
 import { UploadCloud, Store, Coins, Fingerprint, CheckCircle2 } from 'lucide-react';
 import AnomalyCard from './AnomalyCard';
+import AuditReasonModal from './AuditReasonModal';
 
 interface EmployeeDetailProps {
   employeeId: string;
@@ -51,6 +52,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
   const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
   const [editing, setEditing] = useState(false);
   const [closeResult, setCloseResult] = useState<any>(null);
+  const [reasonModalData, setReasonModalData] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     department: '',
@@ -151,6 +153,14 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
     setFiles([]);
     setUploading(false);
     fetchProfile();
+
+    // Auto-surface the first flagged/denied result, if any
+    const firstProblem = results.find(
+      r => r.success && (r.data.audit.status === 'FLAGGED' || r.data.audit.status === 'DENIED')
+    );
+    if (firstProblem) {
+      setReasonModalData(firstProblem.data);
+    }
   };
 
   const handleCloseMonth = async () => {
@@ -396,11 +406,19 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
                         {result.data.expense.currency} {result.data.expense.amount}
                       </span>
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${result.data.audit.status === 'DENIED' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                          result.data.audit.status === 'FLAGGED' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
-                            'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        result.data.audit.status === 'FLAGGED' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
+                          'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                         }`}>
                         {result.data.audit.status}
                       </span>
+                      {(result.data.audit.status === 'FLAGGED' || result.data.audit.status === 'DENIED') && (
+                        <button
+                          onClick={() => setReasonModalData(result.data)}
+                          className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                        >
+                          View Reason
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -515,6 +533,17 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
             </div>
           ))}
         </div>
+        {reasonModalData && (
+          <AuditReasonModal
+            merchant={reasonModalData.expense.merchant}
+            amount={reasonModalData.expense.amount}
+            currency={reasonModalData.expense.currency}
+            status={reasonModalData.audit.status}
+            riskScore={reasonModalData.audit.riskScore}
+            anomalies={reasonModalData.audit.anomalies}
+            onClose={() => setReasonModalData(null)}
+          />
+        )}
       </div>
     </div>
   );
