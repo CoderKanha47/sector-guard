@@ -3,6 +3,7 @@
 An AI-powered expense reimbursement auditing platform. Employees upload receipts, a hosted vision-language model extracts the data automatically, and a rule-based fraud engine catches policy violations before finance ever sees them.
 
 **Live demo:** https://sector-guard.vercel.app/
+
 ---
 
 ## Overview
@@ -24,6 +25,7 @@ Sector Guard automates the expense reimbursement workflow that finance teams usu
   - Per-transaction policy limit checks
   - Split-receipt detection (catches attempts to divide one large expense into several smaller ones to dodge limits)
   - Temporal conflict detection (flags physically implausible overlapping claims, e.g. two transport charges minutes apart)
+  - Flagged/denied claims auto-surface a plain-language explanation modal (which rule triggered, why, and what happens next) instead of a bare status badge
 - **Dynamic employee trust rating** — auto-adjusts based on audit history (clean record improves it, fraud flags lower it)
 - **Employee management** — full CRUD (create, view, edit, cascade-delete)
 - **Monthly payout engine**
