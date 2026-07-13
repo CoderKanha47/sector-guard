@@ -69,7 +69,7 @@ export default function AddEmployeeModal({ onClose, onSuccess }: AddEmployeeModa
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             required
-            placeholder="Employee ID (e.g. emp_priya_2026)"
+            placeholder="Employee ID"
             value={form.id}
             onChange={e => handleChange('id', e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50"
