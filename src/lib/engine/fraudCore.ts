@@ -9,7 +9,7 @@ interface AuditResult {
 
 
 
-export async function executeFraudAudit(employeeId: string, parsedData: any): Promise<AuditResult> {
+export async function executeFraudAudit(employeeId: string, parsedData: any, currentExpenseId?: string): Promise<AuditResult> {
   const anomalies: AuditResult['anomalies'] = [];
   let riskScore = 0;
 
@@ -39,8 +39,9 @@ export async function executeFraudAudit(employeeId: string, parsedData: any): Pr
   const recentExpenses = await prisma.expense.findMany({
     where: {
       employeeId,
+      id: currentExpenseId ? { not: currentExpenseId } : undefined,
       timestamp: {
-        gte: new Date(currentTimestamp.getTime() - 24 * 60 * 60 * 1000), // 24-hour lookback window
+        gte: new Date(currentTimestamp.getTime() - 24 * 60 * 60 * 1000),
         lte: new Date(currentTimestamp.getTime() + 24 * 60 * 60 * 1000)
       }
     }

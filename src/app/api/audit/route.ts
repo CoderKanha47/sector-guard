@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     });
 
     // Pipeline Execution Step C: Pass record to behavioral evaluation framework
-    const auditMetrics = await executeFraudAudit(String(employeeId), parsedReceiptData);
+    const auditMetrics = await executeFraudAudit(String(employeeId), parsedReceiptData, savedExpense.id);
 
     // Pipeline Execution Step D: Save audit findings and individual anomaly indicators
     const finalAuditRecord = await prisma.audit.create({
