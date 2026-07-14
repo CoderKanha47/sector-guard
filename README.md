@@ -46,7 +46,7 @@ Sector Guard automates the expense reimbursement workflow that finance teams usu
 | Styling | Tailwind CSS |
 | Database | PostgreSQL |
 | ORM | Prisma (adapter-based, `@prisma/adapter-pg`) |
-| AI / Vision | Groq API — `meta-llama/llama-4-scout-17b-16e-instruct` |
+| AI / Vision | Groq API — `Qwen 3.6 27B` |
 | Local dev infra | Docker Compose |
 | Production hosting | Vercel |
 | Production database | Neon (serverless Postgres) |

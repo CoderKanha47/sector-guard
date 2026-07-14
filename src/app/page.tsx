@@ -110,7 +110,7 @@ export default function SectorGuardDashboard() {
               <div className="w-full flex items-center gap-3 mt-8 pt-6 border-t border-white/5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-                  System Online // Groq llama-4-scout-17b-16e-instruct
+                  System Online // Qwen 3.6 27B
                 </span>
               </div>
 
