@@ -3,11 +3,19 @@ import { prisma } from '@/lib/prisma';
 import { parseDocumentWithGroq } from '@/lib/ai/promptEngine';
 import { executeFraudAudit } from '@/lib/engine/fraudCore';
 import { getSession } from '@/lib/auth';
+import { checkAndIncrementUsage } from '@/lib/rateLimiter';
 
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+  }
+  const usage = await checkAndIncrementUsage();
+  if (!usage.allowed) {
+    return NextResponse.json(
+      { error: `Daily AI processing limit reached (${usage.currentCount}/30). Please try again tomorrow.` },
+      { status: 429 }
+    );
   }
   try {
     const formData = await request.formData();

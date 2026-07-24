@@ -7,6 +7,7 @@ import EmployeeDetail from '@/components/EmployeeDetail';
 import AboutModal from '@/components/AboutModal';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import UsageIndicator from './UsageIndicator';
 
 export default function SectorGuardDashboard() {
     const [activeTab, setActiveTab] = useState<'home' | 'employees'>('home');
@@ -70,6 +71,11 @@ export default function SectorGuardDashboard() {
                         </button>
                     </nav>
                 </div>
+
+                {/* usageIndicator */}
+                <UsageIndicator />
+
+                {/* user indicator */}
 
                 <div className="hidden md:flex items-center justify-between gap-2 px-2 border-t border-white/5 pt-4">
                     <div className="flex items-center gap-3 min-w-0">
