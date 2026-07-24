@@ -73,6 +73,7 @@ export default function SectorGuardDashboard() {
                 </div>
 
                 {/* usageIndicator */}
+                
                 <UsageIndicator />
 
                 {/* user indicator */}
