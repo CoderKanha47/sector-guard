@@ -1,4 +1,4 @@
-# Sector Guard
+# Sector Guard v1.3
 
 An AI-powered expense reimbursement auditing platform. Employees upload receipts, a hosted vision-language model extracts the data automatically, and a rule-based fraud engine catches policy violations before finance ever sees them.
 
