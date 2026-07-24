@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { closeMonthlyPayout } from '@/lib/engine/payoutEngine';
+import { getSession } from '@/lib/auth';
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const { employeeId, year, month } = body;

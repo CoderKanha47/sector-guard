@@ -1,0 +1,17 @@
+// The following updates are expected to be implemented in Sector Guard as part of update to v1.3 from v1.2 //
+
+
+#BACKEND
+
+1. implement rate limiting
+2. implement queuing
+3. implement auth for the admin to prevent unknown access
+
+#Database
+
+1. Enter minimum 50 entries within 7days
+
+#AI
+
+1. Train to find out the trends for future
+

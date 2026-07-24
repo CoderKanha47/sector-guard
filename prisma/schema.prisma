@@ -14,8 +14,15 @@ model Employee {
   address     String          @default("Not Provided")
   designation String          @default("Not Specified")
   rating      Float           @default(100)
+  accessCode  String          @default("changeme")
   expenses    Expense[]
   payouts     MonthlyPayout[]
+}
+
+model ApiUsage {
+  id    String @id @default(uuid())
+  date  String @unique
+  count Int    @default(0)
 }
 
 model Expense {
@@ -52,19 +59,18 @@ model Anomaly {
 }
 
 model MonthlyPayout {
-  id                  String    @id @default(uuid())
-  employeeId          String
-  year                Int
-  month               Int
-  totalClaimed        Float
-  totalReimbursement  Float
-  categoryBreakdown   Json
-  expenseCount        Int
-  status              String    @default("PENDING")
-  closedAt            DateTime  @default(now())
-  paidAt              DateTime?
-
-  employee            Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(uuid())
+  employeeId         String
+  year               Int
+  month              Int
+  totalReimbursement Float
+  expenseCount       Int
+  status             String    @default("PENDING")
+  closedAt           DateTime  @default(now())
+  paidAt             DateTime?
+  categoryBreakdown  Json
+  totalClaimed       Float
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, year, month])
 }

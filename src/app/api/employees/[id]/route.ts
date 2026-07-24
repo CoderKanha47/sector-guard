@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getEmployeeProfile } from '@/lib/engine/employeeStats';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 export async function GET(
+
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
+  }
   try {
     const { id } = await params;
     const employee = await getEmployeeProfile(id);

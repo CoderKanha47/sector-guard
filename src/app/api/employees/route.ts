@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getAllEmployeesSummary } from '@/lib/engine/employeeStats';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
+  }
   try {
     const employees = await getAllEmployeesSummary();
     return NextResponse.json({ success: true, employees });
@@ -16,6 +21,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const { id, name, department, designation, address, tierLimit } = body;

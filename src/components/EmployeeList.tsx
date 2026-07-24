@@ -26,9 +26,15 @@ export default function EmployeeList({ onSelectEmployee }: EmployeeListProps) {
   const fetchEmployees = () => {
     setLoading(true);
     fetch('/api/employees')
-      .then(res => res.json())
+      .then(res => {
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.success) setEmployees(data.employees);
+        if (data?.success) setEmployees(data.employees);
       })
       .finally(() => setLoading(false));
   };
