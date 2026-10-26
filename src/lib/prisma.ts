@@ -1,17 +1,18 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 
-const databaseUrl =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:sectorguard2026@db:5432/sector_guard_db?schema=public";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL must be set');
+}
 
 // Prevent multiple PrismaClient instances during Next.js dev hot-reload
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-
-export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient({ adapter });
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  datasourceUrl: databaseUrl,
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

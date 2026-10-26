@@ -76,11 +76,21 @@ export async function POST(request: Request) {
     console.log('[CREATE EMPLOYEE] Created employee:', employee.id);
     return NextResponse.json({ success: true, employee, initialAccessCode });
   } catch (error) {
-    console.error("[CREATE EMPLOYEE] Failed to create employee:", error);
+    const err = error as { code?: string; meta?: unknown; message?: string; name?: string } | Error;
+    console.error("[CREATE EMPLOYEE] Failed:", {
+      name: err.name,
+      message: err.message,
+      code: 'code' in err ? err.code : undefined,
+      meta: 'meta' in err ? err.meta : undefined,
+    });
     return NextResponse.json(
-      process.env.NODE_ENV === 'production'
-        ? { error: "Failed to create employee." }
-        : { error: "Failed to create employee.", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Failed to create employee.",
+        ...(process.env.NODE_ENV !== 'production' && {
+          details: err.message,
+          code: 'code' in err ? err.code : undefined,
+        }),
+      },
       { status: 500 }
     );
   }
