@@ -54,6 +54,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const fetchProfile = useCallback(() => {
     fetch(`/api/employees/${employeeId}`)
@@ -223,12 +224,16 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
         </div>
       )}
 
-      {/* RECEIPT FOLDERS */}
+{/* RECEIPT FOLDERS */}
       <div className="bg-white/5 border border-white/5 rounded-xl p-6">
         <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
-          My Receipt Folders — organised by year &amp; month
+          My Receipt Folders — organised by year & month
         </h3>
-        <ReceiptFolders employeeId={employeeId} />
+        <ReceiptFolders
+          employeeId={employeeId}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        />
       </div>
     </div>
   );

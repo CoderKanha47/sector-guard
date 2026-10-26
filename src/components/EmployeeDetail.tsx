@@ -484,15 +484,6 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
                 </option>
               ))}
             </select>
-            <select
-              value={selectedYear}
-              onChange={e => setSelectedYear(Number(e.target.value))}
-              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
-            >
-              {Array.from({ length: 100 }, (_, i) => 2000 + i).map(y => (
-                <option key={y} value={y} className="bg-slate-900">{y}</option>
-              ))}
-            </select>
             <button
               onClick={handleCloseMonth}
               disabled={closing}

@@ -8,7 +8,8 @@ import {
   IndianRupee,
   CalendarDays,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown
 } from 'lucide-react';
 import AuditReasonModal from './AuditReasonModal';
 
@@ -49,8 +50,8 @@ export interface FolderReceipt {
 
 interface ReceiptFoldersProps {
   employeeId: string;
-  selectedYear?: number;
-  onYearChange?: (year: number) => void;
+  selectedYear: number;
+  onYearChange: (year: number) => void;
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -59,10 +60,14 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   APPROVED: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
 };
 
-export default function ReceiptFolders({ employeeId, selectedYear: controlledYear, onYearChange }: ReceiptFoldersProps) {
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export default function ReceiptFolders({ employeeId, selectedYear, onYearChange }: ReceiptFoldersProps) {
   const [folders, setFolders] = useState<YearFolder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [openMonth, setOpenMonth] = useState<{ year: number; folder: MonthFolder } | null>(null);
   const [receipts, setReceipts] = useState<FolderReceipt[]>([]);
   const [loadingMonth, setLoadingMonth] = useState(false);
@@ -80,27 +85,14 @@ export default function ReceiptFolders({ employeeId, selectedYear: controlledYea
             full.push(byYear.get(y) ?? { year: y, totalReceipts: 0, months: [] });
           }
           setFolders(full);
-          const yearToUse = controlledYear ?? ((prev: number | null) => {
-            if (prev !== null && full.some(y => y.year === prev)) return prev;
-            const firstWithData = full.find(y => y.totalReceipts > 0);
-            return firstWithData ? firstWithData.year : new Date().getFullYear();
-          });
-          setSelectedYear(prev => typeof yearToUse === 'function' ? yearToUse(prev) : yearToUse);
         }
       })
       .finally(() => setLoading(false));
-  }, [employeeId, controlledYear]);
+  }, [employeeId]);
 
   useEffect(() => {
     fetchFolders();
   }, [fetchFolders]);
-
-  // Sync with parent when controlled year changes
-  useEffect(() => {
-    if (controlledYear !== undefined && controlledYear !== selectedYear) {
-      setSelectedYear(controlledYear);
-    }
-  }, [controlledYear, selectedYear]);
 
   const openMonthFolder = (year: number, folder: MonthFolder) => {
     setOpenMonth({ year, folder });
@@ -117,50 +109,37 @@ export default function ReceiptFolders({ employeeId, selectedYear: controlledYea
   const closeMonthFolder = () => {
     setOpenMonth(null);
     setReceipts([]);
-    // Don't reset selectedYear or refetch folders - keep parent in sync
   };
 
   const handleYearChange = (year: number) => {
-    setSelectedYear(year);
-    onYearChange?.(year);
+    onYearChange(year);
   };
 
   if (loading) {
     return <p className="text-slate-500 text-sm font-mono">Loading receipt folders...</p>;
   }
 
-  if (folders.length === 0) {
-    return (
-      <div className="text-center py-10 bg-white/5 border border-dashed border-white/10 rounded-xl">
-        <Folder className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-        <p className="text-sm text-slate-400 font-semibold">No receipts recorded yet</p>
-        <p className="text-xs text-slate-600 mt-1">Uploaded receipts are filed here by year and month.</p>
-      </div>
-    );
-  }
-
-  const currentYear = folders.find(y => y.year === selectedYear) ?? folders.find(y => y.year === new Date().getFullYear()) ?? folders[0];
+  const currentYear = folders.find(y => y.year === selectedYear) ?? { year: selectedYear, totalReceipts: 0, months: [] };
 
   return (
     <div className="space-y-4 animate-fadeIn">
-      {/* YEAR SELECTOR */}
+      {/* YEAR SELECTOR - Single dropdown replacing the button grid */}
       {!openMonth && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
-          {folders.map(y => (
-            <button
-              key={y.year}
-              onClick={() => handleYearChange(y.year)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                currentYear.year === y.year
-                  ? 'bg-blue-500/10 border-blue-500/40 text-blue-300'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-              }`}
-            >
-              {y.year}
-              <span className="ml-1.5 font-mono text-[10px] opacity-60">{y.totalReceipts}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-3 flex-wrap">
+          <CalendarDays className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+          <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Year</span>
+          <select
+            value={selectedYear}
+            onChange={e => handleYearChange(Number(e.target.value))}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 shrink-0"
+          >
+            {Array.from({ length: 100 }, (_, i) => 2000 + i).map(y => (
+              <option key={y} value={y} className="bg-slate-900">{y}</option>
+            ))}
+          </select>
+          <span className="text-xs font-mono text-slate-500 opacity-60">
+            {currentYear.totalReceipts} receipt{currentYear.totalReceipts !== 1 ? 's' : ''}
+          </span>
         </div>
       )}
 
@@ -272,7 +251,7 @@ export default function ReceiptFolders({ employeeId, selectedYear: controlledYea
                     <Folder className="w-4 h-4 text-slate-600 shrink-0" />
                   )}
                   <span className={`text-xs font-bold ${hasReceipts ? 'text-white' : 'text-slate-500'}`}>
-                    {folder?.monthName ?? new Date(2000, monthNum - 1).toLocaleString('default', { month: 'long' })}
+                    {folder?.monthName ?? MONTH_NAMES[monthNum - 1]}
                   </span>
                 </div>
                 {hasReceipts && folder ? (
