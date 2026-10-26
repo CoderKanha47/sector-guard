@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         designation: designation || "Not Specified",
         address: address || "Not Provided",
         tierLimit: Number(tierLimit),
+        tierLimitCurrency: "INR",
         accessCode: hashAccessCode(initialAccessCode)
       }
     });
