@@ -67,14 +67,31 @@ export async function parseAndValidateReceipt(
       const raw = await parseDocumentWithGroq(imageBuffer, mimeType);
       const validated = receiptDataSchema.parse(raw);
       
+      // Currency validation - do not silently default to INR
+      const rawCurrency = validated.currency;
+      const hasValidCurrency = rawCurrency && typeof rawCurrency === 'string' && rawCurrency.trim().length > 0;
+      const currency = hasValidCurrency ? String(rawCurrency).trim().toUpperCase() : 'UNKNOWN';
+      
       const baseData = {
         merchant: String(validated.merchant).trim(),
         dateTime: new Date(validated.dateTime as string),
         amount: Number(validated.amount),
-        currency: String(validated.currency || 'INR').toUpperCase(),
+        currency,
         category: normalizeCategory(validated.category),
         lineItems: (validated.lineItems || []) as ReceiptLineItem[]
       };
+
+      // If currency is missing or ambiguous, mark for review and skip conversion
+      if (!hasValidCurrency) {
+        return {
+          ...baseData,
+          amountUsd: 0,
+          fxRate: 0,
+          fxRateDate: baseData.dateTime,
+          fxProvider: 'NONE',
+          conversionStatus: 'PENDING_REVIEW'
+        };
+      }
 
       const conversion = await convertToUsd(baseData.amount, baseData.currency, baseData.dateTime);
 

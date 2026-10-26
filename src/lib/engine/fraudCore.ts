@@ -43,8 +43,30 @@ export async function executeFraudAudit(
     currentTimestamp
   );
 
+  // If policy limit conversion fails, block the audit and require review
+  if (policyLimitConversion.status === 'PENDING_REVIEW' || policyLimitConversion.status === 'FAILED') {
+    await tx.employee.update({
+      where: { id: employeeId },
+      data: { rating: Math.max(0, Number(employee.rating) - 20) }
+    });
+    
+    return {
+      calculatedReimbursement: 0,
+      calculatedReimbursementUsd: 0,
+      policyLimitUsd: null,
+      riskScore: 100,
+      status: 'DENIED',
+      anomalies: [{
+        type: 'POLICY_LIMIT_CONVERSION_FAILED',
+        description: `Cannot audit expense: policy limit conversion failed for ${employee.tierLimitCurrency}. Receipt requires manual review.`,
+        severity: 'HIGH'
+      }],
+      newRating: Math.max(0, Number(employee.rating) - 20)
+    };
+  }
+
   const decision = evaluateReceipt({
-    employeeTierLimit: policyLimitConversion.limitUsd > 0 ? policyLimitConversion.limitUsd : Number(employee.tierLimit),
+    employeeTierLimit: policyLimitConversion.limitUsd,
     employeeTierLimitOriginal: Number(employee.tierLimit),
     employeeTierLimitCurrency: employee.tierLimitCurrency,
     currentRating: Number(employee.rating),
@@ -81,7 +103,7 @@ export async function executeFraudAudit(
   return {
     calculatedReimbursement: decision.calculatedReimbursement,
     calculatedReimbursementUsd: decision.calculatedReimbursementUsd,
-    policyLimitUsd: policyLimitConversion.limitUsd > 0 ? policyLimitConversion.limitUsd : null,
+    policyLimitUsd: policyLimitConversion.limitUsd,
     riskScore: decision.riskScore,
     status: decision.status,
     anomalies: decision.anomalies,

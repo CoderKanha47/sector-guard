@@ -27,7 +27,7 @@ export interface PolicyLimitConversion {
   fxRate: number;
   fxRateDate: Date;
   fxProvider: string;
-  status: 'CONVERTED' | 'PENDING_REVIEW' | 'NOT_NEEDED';
+  status: 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED';
 }
 
 export interface EvaluateContext {
@@ -82,6 +82,26 @@ export function evaluateReceipt(ctx: EvaluateContext): Decision {
   const currentMerchant = ctx.current.merchant;
   const employeeTierLimit = Number(ctx.employeeTierLimit);
   const policyLimitConversion = ctx.policyLimitConversion;
+
+  // Block expenses with failed or pending currency conversion
+  if (ctx.current.conversionStatus === 'PENDING_REVIEW' || ctx.current.conversionStatus === 'FAILED') {
+    anomalies.push({
+      type: 'CURRENCY_CONVERSION_FAILED',
+      description: `Cannot audit expense: currency conversion failed or unavailable for ${currentCurrency}. Receipt requires manual review.`,
+      severity: 'HIGH'
+    });
+    riskScore += 100; // Force DENIED
+  }
+
+  // Block if policy limit conversion failed
+  if (policyLimitConversion?.status === 'PENDING_REVIEW' || policyLimitConversion?.status === 'FAILED') {
+    anomalies.push({
+      type: 'POLICY_LIMIT_CONVERSION_FAILED',
+      description: `Cannot audit expense: policy limit conversion failed for ${ctx.employeeTierLimitCurrency}. Receipt requires manual review.`,
+      severity: 'HIGH'
+    });
+    riskScore += 100; // Force DENIED
+  }
 
   if (currentAmount > employeeTierLimit) {
     const limitDisplay = ctx.employeeTierLimitOriginal 

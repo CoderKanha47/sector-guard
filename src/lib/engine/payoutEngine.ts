@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { convertPolicyLimitToUsd } from '@/lib/currency/converter';
 
 const CATEGORY_MAP: Record<string, string> = {
   transport: 'TRAVEL',
@@ -41,38 +42,54 @@ export async function closeMonthlyPayout(employeeId: string, year: number, month
     include: { audit: true }
   });
 
-  const approvedExpenses = expenses.filter(exp => exp.audit?.status === 'APPROVED');
-
-  // Raw total claimed in original currency (for reference)
-  const totalClaimed = approvedExpenses.reduce(
-    (sum, exp) => sum + (exp.audit?.calculatedReimbursement || 0),
-    0
+  // Exclude expenses with failed/pending currency conversion from payout
+  const approvedExpenses = expenses.filter(exp => 
+    exp.audit?.status === 'APPROVED' && 
+    exp.conversionStatus !== 'PENDING_REVIEW' && 
+    exp.conversionStatus !== 'FAILED'
   );
 
-  // USD-normalized total claimed (for cross-currency aggregation)
+  // USD-normalized total claimed (authoritative for cross-currency aggregation)
   const totalClaimedUsd = approvedExpenses.reduce(
     (sum, exp) => sum + (exp.audit?.calculatedReimbursementUsd || 0),
     0
   );
 
-  // Policy limit in USD for this month (approximate using current rate)
-  const policyLimitUsd = (await import('@/lib/currency/converter')).convertPolicyLimitToUsd(
+  // Also track original currency totals for reference (grouped by currency)
+  const totalClaimedByCurrency: Record<string, number> = {};
+  for (const exp of approvedExpenses) {
+    const curr = exp.currency || 'UNKNOWN';
+    totalClaimedByCurrency[curr] = (totalClaimedByCurrency[curr] || 0) + (exp.audit?.calculatedReimbursement || 0);
+  }
+
+  // Policy limit in USD for this month (using the first day of the month as reference)
+  const policyLimitResult = await convertPolicyLimitToUsd(
     Number(employee.tierLimit),
     employee.tierLimitCurrency,
     new Date(year, month - 1, 1)
-  ).then(r => r.limitUsd);
+  );
+  const policyLimitUsd = policyLimitResult.limitUsd;
 
-  // We'll use the employee's tier limit in original currency for the cap
-  // Actual payout, capped at the employee's monthly tier limit (original currency)
+  // If policy limit conversion failed, block payout and require review
+  if (policyLimitResult.status === 'PENDING_REVIEW' || policyLimitResult.status === 'FAILED') {
+    throw new Error(`Cannot calculate payout: policy limit conversion failed for ${employee.tierLimitCurrency}. Requires manual review.`);
+  }
+
+  // Single authoritative calculation: USD-normalized cap
+  const totalReimbursementUsd = Math.min(totalClaimedUsd, policyLimitUsd || totalClaimedUsd);
+
+  // For backward compatibility, also compute original-currency reimbursement
+  // using the employee's tier limit in original currency (only meaningful if all receipts are same currency)
+  const totalClaimed = approvedExpenses.reduce(
+    (sum, exp) => sum + (exp.audit?.calculatedReimbursement || 0),
+    0
+  );
   const totalReimbursement = Math.min(totalClaimed, employee.tierLimit);
 
-  // USD-equivalent payout, capped at USD-equivalent tier limit
-  const totalReimbursementUsd = Math.min(totalClaimedUsd, (await policyLimitUsd) || totalClaimedUsd);
-
-  // Category breakdown in original currency
+  // Category breakdown in original currency (grouped by currency for reference)
   const categoryBreakdown: Record<string, number> = initCategoryBreakdown();
 
-  // Category breakdown in USD
+  // Category breakdown in USD (authoritative)
   const categoryBreakdownUsd: Record<string, number> = initCategoryBreakdown();
 
   for (const exp of approvedExpenses) {

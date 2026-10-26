@@ -143,8 +143,11 @@ Required environment variables on Vercel:
 |---|---|
 | `DATABASE_URL` | Neon **pooled** connection string (for serverless runtime) |
 | `GROQ_API_KEY` | Groq API key |
+| `FX_API_KEY` | exchangerate-api.com API key for live FX rates |
+| `FX_PROVIDER` | (optional) FX provider name, defaults to `exchangerate-api` |
+| `FX_BASE_URL` | (optional) FX provider base URL, defaults to `https://api.exchangerate-api.com/v4` |
 
-> Note: database migrations against Neon should use the **direct** (non-pooled) connection string, since Neon's connection pooler doesn't support the session-level advisory locks Prisma's migration tooling relies on.
+> Note: database migrations against Neon should use the **direct** (non-pooled) connection string, since Neon's connection pooler doesn't support the session-level advisory locks Prisma's migration tooling relies on. Without `FX_API_KEY`, non-USD receipts will be marked for manual review.
 
 ---
 
@@ -192,8 +195,11 @@ src/
 ## Known Limitations
 
 - Fraud detection rules are per-transaction and merchant/time-window based; no monthly aggregate anomaly detection beyond the payout cap
-- Automated tests are limited to a fraud-rules eval harness (`tests/fraudRules.test.mjs`); no end-to-end test suite
+- Automated tests are limited to a fraud-rules eval harness (`tests/fraudRules.test.mjs`), currency conversion tests (`tests/currency.test.mjs`), and conversion status tests (`tests/conversionStatus.test.mjs`); no end-to-end test suite
 - Category mapping (Travel / Food / Stay / Other) is a fixed lookup, not configurable per organization
+- FX provider requires `FX_API_KEY` environment variable; without it, non-USD receipts are marked `PENDING_REVIEW` and denied
+- Hardcoded fallback FX rates have been removed; live provider or manual review is required
+- PENDING_REVIEW conversion status forces expense denial; manual admin review workflow not yet automated
 
 ---
 

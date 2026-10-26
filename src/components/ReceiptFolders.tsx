@@ -5,11 +5,10 @@ import {
   ChevronLeft,
   Folder,
   FolderOpen,
-  IndianRupee,
+  DollarSign,
   CalendarDays,
   Lock,
-  CheckCircle2,
-  ChevronDown
+  CheckCircle2
 } from 'lucide-react';
 import AuditReasonModal from './AuditReasonModal';
 
@@ -280,7 +279,7 @@ export default function ReceiptFolders({ employeeId, selectedYear, onYearChange,
                       <span className="text-[10px] font-mono font-normal text-slate-500 ml-1">receipts</span>
                     </p>
                     <p className="text-[10px] font-mono text-slate-500 mt-1.5 flex items-center gap-1">
-                      <IndianRupee className="w-2.5 h-2.5" />
+                      <DollarSign className="w-2.5 h-2.5" />
                       {folder.totalAmount.toFixed(2)}
                     </p>
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">

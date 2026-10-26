@@ -36,7 +36,7 @@ async function fetchRateFromProvider(
   date: Date
 ): Promise<{ rate: number; provider: string; effectiveDate: Date } | null> {
   if (!FX_API_KEY) {
-    console.warn('[FX] No API key configured, skipping live rate fetch');
+    console.warn('[FX] No API key configured, cannot fetch live rate');
     return null;
   }
 
@@ -64,31 +64,6 @@ async function fetchRateFromProvider(
     console.error(`[FX] Fetch failed for ${sourceCurrency} on ${dateStr}:`, error);
     return null;
   }
-}
-
-async function getFallbackRate(sourceCurrency: string, targetCurrency: string): Promise<number | null> {
-  const fallbackRates: Record<string, Record<string, number>> = {
-    USD: { INR: 83.12, MYR: 4.71, JPY: 149.50, EUR: 0.92, GBP: 0.79, CNY: 7.24, SGD: 1.34, AUD: 1.52, CAD: 1.36, HKD: 7.81, CHF: 0.88 },
-    INR: { USD: 0.01203 },
-    MYR: { USD: 0.2123 },
-    JPY: { USD: 0.00669 },
-    EUR: { USD: 1.087 },
-    GBP: { USD: 1.266 },
-    CNY: { USD: 0.1381 },
-    SGD: { USD: 0.746 },
-    AUD: { USD: 0.658 },
-    CAD: { USD: 0.735 },
-    HKD: { USD: 0.128 },
-    CHF: { USD: 1.136 }
-  };
-
-  if (fallbackRates[sourceCurrency]?.[targetCurrency]) {
-    return fallbackRates[sourceCurrency][targetCurrency];
-  }
-  if (fallbackRates[targetCurrency]?.[sourceCurrency]) {
-    return 1 / fallbackRates[targetCurrency][sourceCurrency];
-  }
-  return null;
 }
 
 export async function convertToUsd(
@@ -136,22 +111,10 @@ export async function convertToUsd(
     };
   }
 
-  let rateResult = await fetchRateFromProvider(currency, 'USD', transactionDate);
+  const rateResult = await fetchRateFromProvider(currency, 'USD', transactionDate);
 
   if (!rateResult) {
-    const fallbackRate = await getFallbackRate(currency, 'USD');
-    if (fallbackRate) {
-      rateResult = {
-        rate: fallbackRate,
-        provider: `${FX_PROVIDER}-fallback`,
-        effectiveDate: transactionDate
-      };
-      console.warn(`[FX] Using fallback rate for ${currency} -> USD: ${fallbackRate}`);
-    }
-  }
-
-  if (!rateResult) {
-    console.error(`[FX] No rate available for ${currency} -> USD on ${dateStr}`);
+    console.error(`[FX] No live rate available for ${currency} -> USD on ${dateStr}; conversion requires review`);
     return {
       amountUsd: 0,
       fxRate: 0,
@@ -178,7 +141,7 @@ export async function convertPolicyLimitToUsd(
   tierLimit: number,
   tierLimitCurrency: string,
   referenceDate: Date
-): Promise<{ limitUsd: number; fxRate: number; fxRateDate: Date; fxProvider: string; status: 'CONVERTED' | 'PENDING_REVIEW' | 'NOT_NEEDED' }> {
+): Promise<{ limitUsd: number; fxRate: number; fxRateDate: Date; fxProvider: string; status: 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED' }> {
   const currency = tierLimitCurrency.toUpperCase();
 
   if (currency === 'USD') {
@@ -191,7 +154,7 @@ export async function convertPolicyLimitToUsd(
     fxRate: result.fxRate,
     fxRateDate: result.fxRateDate,
     fxProvider: result.fxProvider,
-    status: result.conversionStatus === 'CONVERTED' ? 'CONVERTED' : 'PENDING_REVIEW'
+    status: result.conversionStatus === 'CONVERTED' ? 'CONVERTED' : result.conversionStatus === 'FAILED' ? 'FAILED' : 'PENDING_REVIEW'
   };
 }
 
