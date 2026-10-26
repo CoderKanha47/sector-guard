@@ -85,7 +85,7 @@ Sector Guard automates the expense reimbursement workflow that finance teams usu
 - **Fraud detection is rule-based, not ML-based**: deliberately deterministic and explainable — every flag has a clear, auditable reason, which matters more than a black-box model for a compliance-adjacent use case.
 - **Cascade delete for employees**: deleting an employee removes their full history. This was a deliberate simplicity trade-off for a demo project; a production system would more likely block deletion of employees with existing financial records to preserve the audit trail.
 - **Monthly payout caps, not per-transaction aggregate limits**: the fraud engine checks individual transactions in real time; the monthly tier limit is enforced at payout close, mirroring how real reimbursement cycles reconcile spend against a budget at cycle-end rather than blocking every transaction live.
-- **No authentication**: out of scope for this project's focus (the extraction + fraud-detection pipeline). A production version would add role-based access control (admin vs. employee-scoped permissions).
+- **Authentication & role-based access**: admin login plus per-employee login via access code; employees are scoped to their own receipts/payouts, admins manage all.
 
 ---
 
@@ -154,11 +154,17 @@ Required environment variables on Vercel:
 src/
 ├── app/
 │   ├── page.tsx                  # Main dashboard (Home + Employees)
+│   ├── login/page.tsx            # Login (admin / employee)
 │   └── api/
 │       ├── audit/route.ts        # Receipt upload + parsing + audit pipeline
-│       ├── employees/route.ts    # List / create employees
+│       ├── auth/admin-login/route.ts
+│       ├── auth/employee-login/route.ts
+│       ├── auth/logout/route.ts
+│       ├── employees/route.ts     # List / create employees
 │       ├── employees/[id]/route.ts   # Get / update / delete employee
-│       └── payouts/close/route.ts    # Close a monthly payout
+│       ├── employees/[id]/receipts/route.ts  # Employee receipt folders + payouts
+│       ├── payouts/close/route.ts # Close a monthly payout
+│       └── usage/route.ts
 ├── components/
 │   ├── EmployeeList.tsx
 │   ├── EmployeeDetail.tsx
@@ -167,11 +173,16 @@ src/
 │   └── AnomalyCard.tsx
 ├── lib/
 │   ├── prisma.ts                 # Shared Prisma client
+│   ├── auth.ts                   # Session token helpers
+│   ├── passwords.ts              # Access code hashing/verification
+│   ├── rateLimiter.ts
 │   ├── ai/promptEngine.ts        # Groq vision extraction
+│   ├── ai/validateReceipt.ts
 │   └── engine/
 │       ├── fraudCore.ts          # Fraud detection + risk scoring
-│       ├── employeeStats.ts      # Employee profile / summary queries
-│       └── payoutEngine.ts       # Monthly payout close logic
+│       ├── fraudRules.ts         # Rule definitions
+│       ├── employeeStats.ts     # Employee profile / summary queries
+│       └── payoutEngine.ts      # Monthly payout close logic
 └── prisma/
     └── schema.prisma
 ```
@@ -180,9 +191,8 @@ src/
 
 ## Known Limitations
 
-- No authentication or access control
 - Fraud detection rules are per-transaction and merchant/time-window based; no monthly aggregate anomaly detection beyond the payout cap
-- No automated tests
+- Automated tests are limited to a fraud-rules eval harness (`tests/fraudRules.test.mjs`); no end-to-end test suite
 - Category mapping (Travel / Food / Stay / Other) is a fixed lookup, not configurable per organization
 
 ---

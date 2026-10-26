@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-export const DAILY_LIMIT = 30;
+export const DAILY_LIMIT = 27;
 export const WARNING_THRESHOLD = 25;
 
 function getTodayKey(): string {
