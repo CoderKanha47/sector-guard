@@ -28,12 +28,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getSession();
+  console.log('[CREATE EMPLOYEE] Session check:', session ? `role=${session.role}` : 'null');
   if (!session || session.role !== 'admin') {
+    console.log('[CREATE EMPLOYEE] Returning 403 - Admins only');
     return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
   }
   try {
     const body = await request.json();
     const { id, name, department, designation, address, tierLimit, accessCode } = body;
+
+    console.log('[CREATE EMPLOYEE] Request body:', { id, name, department, designation, address, tierLimit, hasAccessCode: !!accessCode });
 
     if (!id || !name || !department || !tierLimit) {
       return NextResponse.json(
@@ -54,6 +58,8 @@ export async function POST(request: Request) {
       ? accessCode.trim()
       : generateAccessCode();
 
+    console.log('[CREATE EMPLOYEE] Generated access code:', initialAccessCode);
+
     const employee = await prisma.employee.create({
       data: {
         id,
@@ -67,9 +73,10 @@ export async function POST(request: Request) {
       }
     });
 
+    console.log('[CREATE EMPLOYEE] Created employee:', employee.id);
     return NextResponse.json({ success: true, employee, initialAccessCode });
   } catch (error) {
-    console.error("Failed to create employee:", error);
+    console.error("[CREATE EMPLOYEE] Failed to create employee:", error);
     return NextResponse.json(
       process.env.NODE_ENV === 'production'
         ? { error: "Failed to create employee." }

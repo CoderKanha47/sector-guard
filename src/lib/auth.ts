@@ -14,9 +14,14 @@ export interface SessionPayload {
 
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  console.log('[AUTH] All cookies:', allCookies.map(c => c.name));
   const token = cookieStore.get('session')?.value;
+  console.log('[AUTH] Session cookie:', token ? 'present (length=' + token.length + ')' : 'missing');
   if (!token) return null;
-  return verifySessionToken(token);
+  const session = await verifySessionToken(token);
+  console.log('[AUTH] Session verified:', session ? session.role : 'invalid');
+  return session;
 }
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
