@@ -487,7 +487,7 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
               onChange={e => setPayoutYear(Number(e.target.value))}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
             >
-              {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
+              {Array.from({ length: 100 }, (_, i) => 2000 + i).map(y => (
                 <option key={y} value={y} className="bg-slate-900">{y}</option>
               ))}
             </select>
