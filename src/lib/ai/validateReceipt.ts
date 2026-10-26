@@ -93,7 +93,7 @@ export async function parseAndValidateReceipt(
         };
       }
 
-      const conversion = await convertToUsd(baseData.amount, baseData.currency, baseData.dateTime);
+      const conversion = convertToUsd(baseData.amount, baseData.currency, baseData.dateTime);
 
       return {
         ...baseData,
