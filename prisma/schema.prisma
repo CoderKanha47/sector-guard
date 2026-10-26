@@ -7,17 +7,17 @@ datasource db {
 }
 
 model Employee {
-  id              String          @id @default(uuid())
-  name            String
-  department      String
-  tierLimit       Float
-  tierLimitCurrency String        @default("INR")
-  address         String          @default("Not Provided")
-  designation     String          @default("Not Specified")
-  rating          Float           @default(100)
-  accessCode      String          @default("changeme")
-  expenses        Expense[]
-  payouts         MonthlyPayout[]
+  id                String          @id @default(uuid())
+  name              String
+  department        String
+  tierLimit         Float
+  address           String          @default("Not Provided")
+  designation       String          @default("Not Specified")
+  rating            Float           @default(100)
+  accessCode        String          @default("changeme")
+  tierLimitCurrency String          @default("INR")
+  expenses          Expense[]
+  payouts           MonthlyPayout[]
 }
 
 model ApiUsage {
@@ -27,34 +27,34 @@ model ApiUsage {
 }
 
 model Expense {
-  id              String   @id @default(uuid())
-  employeeId      String
-  merchant        String
-  amount          Float
-  currency        String   @default("INR")
-  amountUsd       Float?
-  fxRate          Float?
-  fxRateDate      DateTime?
-  fxProvider      String?
-  conversionStatus String  @default("NOT_NEEDED")
-  timestamp       DateTime
-  category        String
-  lineItems       Json
-  createdAt       DateTime @default(now())
-  audit           Audit?
-  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid())
+  employeeId       String
+  merchant         String
+  amount           Float
+  currency         String    @default("INR")
+  timestamp        DateTime
+  category         String
+  lineItems        Json
+  createdAt        DateTime  @default(now())
+  amountUsd        Float?
+  conversionStatus String    @default("NOT_NEEDED")
+  fxProvider       String?
+  fxRate           Float?
+  fxRateDate       DateTime?
+  audit            Audit?
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model Audit {
-  id                      String    @id @default(uuid())
-  expenseId               String    @unique
-  calculatedReimbursement Float
+  id                         String    @id @default(uuid())
+  expenseId                  String    @unique
+  calculatedReimbursement    Float
+  riskScore                  Int
+  status                     String
   calculatedReimbursementUsd Float?
-  policyLimitUsd          Float?
-  riskScore               Int
-  status                  String
-  anomalies               Anomaly[]
-  expense                 Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  policyLimitUsd             Float?
+  anomalies                  Anomaly[]
+  expense                    Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
 }
 
 model Anomaly {
@@ -67,21 +67,21 @@ model Anomaly {
 }
 
 model MonthlyPayout {
-  id                     String    @id @default(uuid())
-  employeeId             String
-  year                   Int
-  month                  Int
-  totalReimbursement     Float
-  totalReimbursementUsd  Float?
-  expenseCount           Int
-  status                 String    @default("PENDING")
-  closedAt               DateTime  @default(now())
-  paidAt                 DateTime?
-  categoryBreakdown      Json
-  categoryBreakdownUsd   Json?
-  totalClaimed           Float
-  totalClaimedUsd        Float?
-  employee               Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(uuid())
+  employeeId            String
+  year                  Int
+  month                 Int
+  totalReimbursement    Float
+  expenseCount          Int
+  status                String    @default("PENDING")
+  closedAt              DateTime  @default(now())
+  paidAt                DateTime?
+  categoryBreakdown     Json
+  totalClaimed          Float
+  categoryBreakdownUsd  Json?
+  totalClaimedUsd       Float?
+  totalReimbursementUsd Float?
+  employee              Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, year, month])
 }
