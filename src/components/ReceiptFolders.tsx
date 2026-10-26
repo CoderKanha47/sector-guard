@@ -72,10 +72,16 @@ export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
       .then(data => {
         if (data.success) {
           const tree: YearFolder[] = data.folders;
-          setFolders(tree);
+          const byYear = new Map(tree.map(y => [y.year, y]));
+          const full: YearFolder[] = [];
+          for (let y = 2000; y <= 2099; y++) {
+            full.push(byYear.get(y) ?? { year: y, totalReceipts: 0, months: [] });
+          }
+          setFolders(full);
           setSelectedYear(prev => {
-            if (prev !== null && tree.some(y => y.year === prev)) return prev;
-            return tree.length > 0 ? tree[0].year : null;
+            if (prev !== null && full.some(y => y.year === prev)) return prev;
+            const firstWithData = full.find(y => y.totalReceipts > 0);
+            return firstWithData ? firstWithData.year : new Date().getFullYear();
           });
         }
       })
@@ -119,7 +125,7 @@ export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
     );
   }
 
-  const currentYear = folders.find(y => y.year === selectedYear) ?? folders[0];
+  const currentYear = folders.find(y => y.year === selectedYear) ?? folders.find(y => y.year === new Date().getFullYear()) ?? folders[0];
 
   return (
     <div className="space-y-4 animate-fadeIn">
