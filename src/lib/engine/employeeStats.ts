@@ -7,6 +7,9 @@ export async function getEmployeeProfile(employeeId: string) {
       expenses: {
         include: { audit: { include: { anomalies: true } } },
         orderBy: { timestamp: 'desc' }
+      },
+      payouts: {
+        orderBy: [{ year: 'desc' }, { month: 'desc' }]
       }
     }
   });
@@ -15,12 +18,24 @@ export async function getEmployeeProfile(employeeId: string) {
 
   const billsUploaded = employee.expenses.length;
 
-  const reimbursementsPaid = employee.expenses.reduce((sum, exp) => {
-    if (exp.audit?.status === 'APPROVED') {
-      return sum + exp.audit.calculatedReimbursement;
+  let approvedCount = 0;
+  let flaggedCount = 0;
+  let deniedCount = 0;
+  let reimbursementsPaid = 0;
+
+  for (const exp of employee.expenses) {
+    const status = exp.audit?.status;
+    if (status === 'APPROVED') {
+      approvedCount++;
+      reimbursementsPaid += exp.audit?.calculatedReimbursement ?? 0;
+    } else if (status === 'FLAGGED') {
+      flaggedCount++;
+    } else if (status === 'DENIED') {
+      deniedCount++;
     }
-    return sum;
-  }, 0);
+  }
+
+  const monthsReimbursed = employee.payouts.filter(p => p.totalReimbursement > 0).length;
 
   return {
     id: employee.id,
@@ -32,6 +47,21 @@ export async function getEmployeeProfile(employeeId: string) {
     rating: employee.rating,
     billsUploaded,
     reimbursementsPaid,
+    approvedCount,
+    flaggedCount,
+    deniedCount,
+    monthsReimbursed,
+    payouts: employee.payouts.map(p => ({
+      id: p.id,
+      year: p.year,
+      month: p.month,
+      status: p.status,
+      totalClaimed: p.totalClaimed,
+      totalReimbursement: p.totalReimbursement,
+      expenseCount: p.expenseCount,
+      closedAt: p.closedAt,
+      paidAt: p.paidAt
+    })),
     history: employee.expenses
   };
 }

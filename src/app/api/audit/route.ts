@@ -1,85 +1,128 @@
 import { NextResponse } from 'next/server';
+import { type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { parseDocumentWithGroq } from '@/lib/ai/promptEngine';
 import { executeFraudAudit } from '@/lib/engine/fraudCore';
 import { getSession } from '@/lib/auth';
-import { checkAndIncrementUsage } from '@/lib/rateLimiter';
+import { checkAndIncrementUsage, DAILY_LIMIT } from '@/lib/rateLimiter';
+import { parseAndValidateReceipt, ReceiptValidationError } from '@/lib/ai/validateReceipt';
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
+
+  if (session.role !== 'admin') {
+    return NextResponse.json(
+      { error: 'Only the admin can process receipts. Please submit receipts to your administrator.' },
+      { status: 403 }
+    );
+  }
+
   const usage = await checkAndIncrementUsage();
   if (!usage.allowed) {
     return NextResponse.json(
-      { error: `Daily AI processing limit reached (${usage.currentCount}/30). Please try again tomorrow.` },
+      { error: `Daily AI processing limit reached (${usage.currentCount}/${DAILY_LIMIT}). Please try again tomorrow.` },
       { status: 429 }
     );
   }
+
+  let formData: FormData;
+  let file: File | null;
+  let submittedEmployeeId: string | null;
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const employeeId = formData.get('employeeId') as string;
+    formData = await request.formData();
+    file = formData.get('file') as File | null;
+    submittedEmployeeId = formData.get('employeeId') as string | null;
+  } catch {
+    return NextResponse.json({ error: 'Malformed multipart request.' }, { status: 400 });
+  }
 
-    if (!file || !employeeId) {
-      return NextResponse.json(
-        { error: "Missing required file attachment or employee footprint credentials." },
-        { status: 400 }
-      );
-    }
+  if (!submittedEmployeeId) {
+    return NextResponse.json({ error: 'employeeId is required for submissions.' }, { status: 400 });
+  }
+  const employeeId = submittedEmployeeId;
 
-    // Convert file object to accessible Buffer for the vision model
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const mimeType = file.type || 'image/jpeg';
+  const targetEmployee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { id: true }
+  });
+  if (!targetEmployee) {
+    return NextResponse.json({ error: 'Employee not found.' }, { status: 404 });
+  }
 
-    // Pipeline Execution Step A: Run through Groq-hosted Vision LLM
-    const parsedReceiptData = await parseDocumentWithGroq(buffer, mimeType);
+  if (!file) {
+    return NextResponse.json({ error: 'Missing required file attachment.' }, { status: 400 });
+  }
 
-    // Pipeline Execution Step B: Commit raw transaction record to database
-    const savedExpense = await prisma.expense.create({
-      data: {
-        employeeId: String(employeeId),
-        merchant: parsedReceiptData.merchant,
-        amount: parsedReceiptData.amount,
-        currency: parsedReceiptData.currency || "INR",
-        timestamp: new Date(parsedReceiptData.dateTime),
-        category: parsedReceiptData.category || "miscellaneous",
-        lineItems: parsedReceiptData.lineItems || []
-      }
-    });
+  const mimeType = file.type || 'image/jpeg';
+  if (!/^image\//.test(mimeType)) {
+    return NextResponse.json({ error: 'Only image uploads are supported.' }, { status: 400 });
+  }
+  if (file.size <= 0) {
+    return NextResponse.json({ error: 'Uploaded file is empty.' }, { status: 400 });
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'Uploaded file exceeds the 10MB limit.' }, { status: 400 });
+  }
 
-    // Pipeline Execution Step C: Pass record to behavioral evaluation framework
-    const auditMetrics = await executeFraudAudit(String(employeeId), parsedReceiptData, savedExpense.id);
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
 
-    // Pipeline Execution Step D: Save audit findings and individual anomaly indicators
-    const finalAuditRecord = await prisma.audit.create({
-      data: {
-        expenseId: savedExpense.id,
-        calculatedReimbursement: auditMetrics.calculatedReimbursement,
-        riskScore: auditMetrics.riskScore,
-        status: auditMetrics.status,
-        anomalies: {
-          create: auditMetrics.anomalies
+  try {
+    const parsedReceiptData = await parseAndValidateReceipt(buffer, mimeType);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const savedExpense = await tx.expense.create({
+        data: {
+          employeeId,
+          merchant: parsedReceiptData.merchant,
+          amount: parsedReceiptData.amount,
+          currency: parsedReceiptData.currency,
+          timestamp: parsedReceiptData.dateTime,
+          category: parsedReceiptData.category,
+          lineItems: parsedReceiptData.lineItems as unknown as Prisma.InputJsonValue
         }
-      },
-      include: {
-        anomalies: true
-      }
+      });
+
+      const auditMetrics = await executeFraudAudit(tx, employeeId, parsedReceiptData, savedExpense.id);
+
+      const finalAuditRecord = await tx.audit.create({
+        data: {
+          expenseId: savedExpense.id,
+          calculatedReimbursement: auditMetrics.calculatedReimbursement,
+          riskScore: auditMetrics.riskScore,
+          status: auditMetrics.status,
+          anomalies: {
+            create: auditMetrics.anomalies
+          }
+        },
+        include: {
+          anomalies: true
+        }
+      });
+
+      return { savedExpense, auditMetrics, finalAuditRecord };
     });
 
-    // Return the aggregated analysis directly to update our Glassmorphic view UI
     return NextResponse.json({
       success: true,
-      expense: savedExpense,
-      audit: finalAuditRecord
+      expense: result.savedExpense,
+      audit: result.finalAuditRecord,
+      newRating: result.auditMetrics.newRating
     });
-
-  } catch (error: any) {
+  } catch (error) {
+    if (error instanceof ReceiptValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
     console.error("Sector Guard Pipeline execution failure:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Internal processing crash inside Sector Guard pipeline.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: 'Internal processing crash inside Sector Guard pipeline.' }
+        : { error: 'Internal processing crash inside Sector Guard pipeline.', details: message },
       { status: 500 }
     );
   }

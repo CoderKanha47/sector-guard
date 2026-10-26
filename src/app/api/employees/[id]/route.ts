@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { getEmployeeProfile } from '@/lib/engine/employeeStats';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { hashAccessCode } from '@/lib/passwords';
 
 export async function GET(
-
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -14,6 +14,11 @@ export async function GET(
   }
   try {
     const { id } = await params;
+
+    if (session.role !== 'admin' && session.employeeId !== id) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+    }
+
     const employee = await getEmployeeProfile(id);
 
     if (!employee) {
@@ -24,10 +29,12 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, employee });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to fetch employee profile:", error);
     return NextResponse.json(
-      { error: "Failed to fetch employee profile.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to fetch employee profile." }
+        : { error: "Failed to fetch employee profile.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -37,6 +44,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
+  }
   try {
     const { id } = await params;
 
@@ -51,10 +62,12 @@ export async function DELETE(
     await prisma.employee.delete({ where: { id } });
 
     return NextResponse.json({ success: true, deletedId: id });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete employee:", error);
     return NextResponse.json(
-      { error: "Failed to delete employee.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to delete employee." }
+        : { error: "Failed to delete employee.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -64,10 +77,14 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session || session.role !== 'admin') {
+    return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
+  }
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, department, designation, address, tierLimit } = body;
+    const { name, department, designation, address, tierLimit, accessCode } = body;
 
     const updated = await prisma.employee.update({
       where: { id },
@@ -76,15 +93,18 @@ export async function PATCH(
         ...(department && { department }),
         ...(designation && { designation }),
         ...(address && { address }),
-        ...(tierLimit && { tierLimit: Number(tierLimit) })
+        ...(tierLimit && { tierLimit: Number(tierLimit) }),
+        ...(typeof accessCode === 'string' && accessCode.trim() && { accessCode: hashAccessCode(accessCode.trim()) })
       }
     });
 
     return NextResponse.json({ success: true, employee: updated });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to update employee:", error);
     return NextResponse.json(
-      { error: "Failed to update employee.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to update employee." }
+        : { error: "Failed to update employee.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

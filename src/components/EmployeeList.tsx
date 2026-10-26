@@ -40,7 +40,24 @@ export default function EmployeeList({ onSelectEmployee }: EmployeeListProps) {
   };
 
   useEffect(() => {
-    fetchEmployees();
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await fetch('/api/employees');
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled && data?.success) setEmployees(data.employees);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {

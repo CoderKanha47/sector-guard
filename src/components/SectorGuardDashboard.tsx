@@ -1,24 +1,39 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Home, Users, Binary, Rocket, BookOpen, ChevronRight } from 'lucide-react';
+import { Home, Users, FolderOpen, Binary, BookOpen, ChevronRight } from 'lucide-react';
 import EmployeeList from '@/components/EmployeeList';
 import EmployeeDetail from '@/components/EmployeeDetail';
+import EmployeeRecords from '@/components/EmployeeRecords';
 import AboutModal from '@/components/AboutModal';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import UsageIndicator from './UsageIndicator';
 
-export default function SectorGuardDashboard() {
-    const [activeTab, setActiveTab] = useState<'home' | 'employees'>('home');
+interface SectorGuardDashboardProps {
+    role: 'admin' | 'employee';
+    userName: string;
+    employeeId?: string;
+}
+
+export default function SectorGuardDashboard({ role, userName, employeeId }: SectorGuardDashboardProps) {
+    const isAdmin = role === 'admin';
+    const [activeTab, setActiveTab] = useState<'home' | 'employees' | 'records'>('home');
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [showAbout, setShowAbout] = useState(false);
+    const [usageLive, setUsageLive] = useState<{ used: number; limit: number } | null>(null);
 
-    const handleTabChange = (tab: 'home' | 'employees') => {
+    const handleUsageChange = (usage: { used: number; limit: number }) => setUsageLive(usage);
+
+    const handleTabChange = (tab: 'home' | 'employees' | 'records') => {
         setActiveTab(tab);
         if (tab !== 'employees') {
             setSelectedEmployeeId(null);
         }
+    };
+
+    const handleStart = () => {
+        handleTabChange(isAdmin ? 'employees' : 'records');
     };
 
     const router = useRouter();
@@ -28,6 +43,14 @@ export default function SectorGuardDashboard() {
         router.push('/login');
         router.refresh();
     };
+
+    const initials = userName
+        .split(' ')
+        .filter(Boolean)
+        .map(part => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans antialiased overflow-x-hidden selection:bg-blue-500/30">
@@ -43,7 +66,7 @@ export default function SectorGuardDashboard() {
                             <h2 className="font-black text-sm tracking-wider uppercase bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent">
                                 Sector Guard
                             </h2>
-                            <span className="text-[10px] font-mono opacity-40">v1.3 // WELCOME</span>
+                            <span className="text-[10px] font-mono opacity-40">v1.4 // {role.toUpperCase()}</span>
                         </div>
                     </div>
 
@@ -59,34 +82,47 @@ export default function SectorGuardDashboard() {
                             <span>Home</span>
                         </button>
 
-                        <button
-                            onClick={() => handleTabChange('employees')}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'employees'
-                                ? 'bg-white/10 border-white/20 text-white shadow-md'
-                                : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                                }`}
-                        >
-                            <Users className="w-4 h-4" />
-                            <span>Employees</span>
-                        </button>
+                        {isAdmin ? (
+                            <button
+                                onClick={() => handleTabChange('employees')}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'employees'
+                                    ? 'bg-white/10 border-white/20 text-white shadow-md'
+                                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                    }`}
+                            >
+                                <Users className="w-4 h-4" />
+                                <span>Employees</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleTabChange('records')}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'records'
+                                    ? 'bg-white/10 border-white/20 text-white shadow-md'
+                                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                    }`}
+                            >
+                                <FolderOpen className="w-4 h-4" />
+                                <span>My Records</span>
+                            </button>
+                        )}
                     </nav>
                 </div>
 
-                {/* usageIndicator */}
-                
-                <UsageIndicator />
+                {/* usageIndicator — admin only (AI processing quota) */}
+                {isAdmin && <UsageIndicator liveValue={usageLive} />}
 
                 {/* user indicator */}
 
                 <div className="hidden md:flex items-center justify-between gap-2 px-2 border-t border-white/5 pt-4">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0">
-                            KK
+                            {initials}
                         </div>
                         <div className="truncate">
-                            <p className="text-xs font-bold text-slate-200 truncate">Kiran Kumar</p>
+                            <p className="text-xs font-bold text-slate-200 truncate">{userName}</p>
                             <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active Session
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                {isAdmin ? 'Administrator' : 'Employee'} Session
                             </span>
                         </div>
                     </div>
@@ -115,15 +151,17 @@ export default function SectorGuardDashboard() {
                                 Sector Guard
                             </h1>
                             <p className="text-xs text-slate-500 max-w-xs leading-relaxed mb-8">
-                                An AI system that reviews expense claims, extracts details from receipts, detects potential fraud, and highlights expenses that need a closer look
+                                {isAdmin
+                                    ? 'An AI system that reviews expense claims, extracts details from receipts, detects potential fraud, and highlights expenses that need a closer look'
+                                    : 'Track your reimbursement records, browse receipts organised month by month, and review your reimbursement and audit history'}
                             </p>
 
                             <div className="w-full space-y-3">
                                 <button
-                                    onClick={() => handleTabChange('employees')}
+                                    onClick={handleStart}
                                     className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm rounded-xl tracking-wide uppercase transition-all duration-200 shadow-lg shadow-blue-500/20"
                                 >
-                                    <ChevronRight className="w-4 h-4" /> Start
+                                    <ChevronRight className="w-4 h-4" /> {isAdmin ? 'Start' : 'My Records'}
                                 </button>
                                 <button
                                     onClick={() => setShowAbout(true)}
@@ -142,7 +180,7 @@ export default function SectorGuardDashboard() {
 
                         </div>
                     </section>
-                ) : (
+                ) : activeTab === 'employees' && isAdmin ? (
                     <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
                         <header className="mb-4">
                             <h3 className="text-sm font-mono uppercase tracking-wider text-slate-400 font-bold">
@@ -154,9 +192,23 @@ export default function SectorGuardDashboard() {
                             <EmployeeDetail
                                 employeeId={selectedEmployeeId}
                                 onBack={() => setSelectedEmployeeId(null)}
+                                onUsageChange={handleUsageChange}
                             />
                         ) : (
                             <EmployeeList onSelectEmployee={(id) => setSelectedEmployeeId(id)} />
+                        )}
+                    </section>
+                ) : (
+                    <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
+                        <header className="mb-4">
+                            <h3 className="text-sm font-mono uppercase tracking-wider text-slate-400 font-bold">
+                                My Records
+                            </h3>
+                        </header>
+                        {employeeId ? (
+                            <EmployeeRecords employeeId={employeeId} />
+                        ) : (
+                            <p className="text-red-400 text-sm font-mono">Session employee not found.</p>
                         )}
                     </section>
                 )}

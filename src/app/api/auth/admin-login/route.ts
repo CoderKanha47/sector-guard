@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createSessionToken } from '@/lib/auth';
+import { safeEqual } from '@/lib/passwords';
 
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    if (password !== process.env.ADMIN_PASSWORD) {
+    if (!safeEqual(String(password ?? ''), String(process.env.ADMIN_PASSWORD ?? ''))) {
       return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
     }
 
@@ -16,11 +17,17 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/'
     });
     return response;
-  } catch (error: any) {
-    return NextResponse.json({ error: "Login failed.", details: error.message }, { status: 500 });
+  } catch (error) {
+    console.error("Admin login failed:", error);
+    return NextResponse.json(
+      process.env.NODE_ENV === 'production'
+        ? { error: "Login failed." }
+        : { error: "Login failed.", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

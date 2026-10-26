@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllEmployeesSummary } from '@/lib/engine/employeeStats';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { generateAccessCode, hashAccessCode } from '@/lib/passwords';
 
 export async function GET() {
   const session = await getSession();
@@ -9,12 +10,17 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
   }
   try {
-    const employees = await getAllEmployeesSummary();
+    const summary = await getAllEmployeesSummary();
+    const employees = session.role === 'admin'
+      ? summary
+      : summary.filter(emp => emp.id === session.employeeId);
     return NextResponse.json({ success: true, employees });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to fetch employee list:", error);
     return NextResponse.json(
-      { error: "Failed to fetch employees.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to fetch employees." }
+        : { error: "Failed to fetch employees.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json();
-    const { id, name, department, designation, address, tierLimit } = body;
+    const { id, name, department, designation, address, tierLimit, accessCode } = body;
 
     if (!id || !name || !department || !tierLimit) {
       return NextResponse.json(
@@ -44,6 +50,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const initialAccessCode = typeof accessCode === 'string' && accessCode.trim()
+      ? accessCode.trim()
+      : generateAccessCode();
+
     const employee = await prisma.employee.create({
       data: {
         id,
@@ -51,15 +61,18 @@ export async function POST(request: Request) {
         department,
         designation: designation || "Not Specified",
         address: address || "Not Provided",
-        tierLimit: Number(tierLimit)
+        tierLimit: Number(tierLimit),
+        accessCode: hashAccessCode(initialAccessCode)
       }
     });
 
-    return NextResponse.json({ success: true, employee });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, employee, initialAccessCode });
+  } catch (error) {
     console.error("Failed to create employee:", error);
     return NextResponse.json(
-      { error: "Failed to create employee.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to create employee." }
+        : { error: "Failed to create employee.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

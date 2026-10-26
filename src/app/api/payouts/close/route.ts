@@ -21,10 +21,12 @@ export async function POST(request: Request) {
     const payout = await closeMonthlyPayout(employeeId, Number(year), Number(month));
 
     return NextResponse.json({ success: true, payout });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to close monthly payout:", error);
     return NextResponse.json(
-      { error: "Failed to close monthly payout.", details: error.message },
+      process.env.NODE_ENV === 'production'
+        ? { error: "Failed to close monthly payout." }
+        : { error: "Failed to close monthly payout.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

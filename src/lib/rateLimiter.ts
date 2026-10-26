@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma';
 
-const DAILY_LIMIT = 30;
-const WARNING_THRESHOLD = 25;
+export const DAILY_LIMIT = 30;
+export const WARNING_THRESHOLD = 25;
 
 function getTodayKey(): string {
-  return new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+  return new Date().toISOString().split('T')[0];
 }
 
 export interface RateLimitCheck {
@@ -18,22 +18,14 @@ export async function checkAndIncrementUsage(): Promise<RateLimitCheck> {
 
   const usage = await prisma.apiUsage.upsert({
     where: { date: today },
-    update: {},
-    create: { date: today, count: 0 }
+    update: { count: { increment: 1 } },
+    create: { date: today, count: 1 }
   });
 
-  if (usage.count >= DAILY_LIMIT - 1) {
-    return { allowed: false, currentCount: usage.count, warning: true };
-  }
-
-  const updated = await prisma.apiUsage.update({
-    where: { date: today },
-    data: { count: { increment: 1 } }
-  });
-
+  const currentCount = usage.count;
   return {
-    allowed: true,
-    currentCount: updated.count,
-    warning: updated.count >= WARNING_THRESHOLD
+    allowed: currentCount <= DAILY_LIMIT,
+    currentCount,
+    warning: currentCount >= WARNING_THRESHOLD && currentCount <= DAILY_LIMIT
   };
 }

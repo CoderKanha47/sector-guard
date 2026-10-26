@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSessionToken } from '@/lib/auth';
+import { verifyAccessCode } from '@/lib/passwords';
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
 
     const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
 
-    if (!employee || employee.accessCode !== accessCode) {
+    if (!employee || !verifyAccessCode(String(accessCode ?? ''), employee.accessCode)) {
       return NextResponse.json({ error: "Invalid employee ID or access code." }, { status: 401 });
     }
 
@@ -23,7 +24,13 @@ export async function POST(request: Request) {
       path: '/'
     });
     return response;
-  } catch (error: any) {
-    return NextResponse.json({ error: "Login failed.", details: error.message }, { status: 500 });
+  } catch (error) {
+    console.error("Employee login failed:", error);
+    return NextResponse.json(
+      process.env.NODE_ENV === 'production'
+        ? { error: "Login failed." }
+        : { error: "Login failed.", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

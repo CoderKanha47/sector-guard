@@ -1,28 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Star, MapPin, Briefcase, Receipt, IndianRupee, Lock, Trash2, Pencil, Save, X } from 'lucide-react';
-import { UploadCloud, Store, Coins, Fingerprint, CheckCircle2 } from 'lucide-react';
-import AnomalyCard from './AnomalyCard';
+import { UploadCloud, Store } from 'lucide-react';
 import AuditReasonModal from './AuditReasonModal';
+import ReceiptFolders from './ReceiptFolders';
 
 interface EmployeeDetailProps {
   employeeId: string;
   onBack: () => void;
-}
-
-interface ExpenseHistoryItem {
-  id: string;
-  merchant: string;
-  amount: number;
-  currency: string;
-  timestamp: string;
-  category: string;
-  audit: {
-    status: 'APPROVED' | 'FLAGGED' | 'DENIED';
-    riskScore: number;
-    calculatedReimbursement: number;
-  } | null;
+  onUsageChange?: (usage: { used: number; limit: number }) => void;
 }
 
 interface EmployeeProfile {
@@ -35,10 +22,31 @@ interface EmployeeProfile {
   rating: number;
   billsUploaded: number;
   reimbursementsPaid: number;
-  history: ExpenseHistoryItem[];
 }
 
-export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailProps) {
+interface AuditData {
+  status: 'APPROVED' | 'FLAGGED' | 'DENIED';
+  riskScore: number;
+  calculatedReimbursement: number;
+  anomalies: Array<{ type: string; description: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' }>;
+}
+
+interface UploadPayload {
+  expense: { merchant: string; amount: number; currency: string };
+  audit: AuditData;
+}
+
+type UploadResult =
+  | { fileName: string; success: true; data: UploadPayload }
+  | { fileName: string; success: false; error: string };
+
+interface CloseResult {
+  totalClaimed: number;
+  totalReimbursement: number;
+  categoryBreakdown: Record<string, number>;
+}
+
+export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: EmployeeDetailProps) {
   const [employee, setEmployee] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const now = new Date();
@@ -48,11 +56,11 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
   const [closeMessage, setCloseMessage] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [batchResults, setBatchResults] = useState<any[]>([]);
+  const [batchResults, setBatchResults] = useState<UploadResult[]>([]);
   const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
   const [editing, setEditing] = useState(false);
-  const [closeResult, setCloseResult] = useState<any>(null);
-  const [reasonModalData, setReasonModalData] = useState<any>(null);
+  const [closeResult, setCloseResult] = useState<CloseResult | null>(null);
+  const [reasonModalData, setReasonModalData] = useState<UploadPayload | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     department: '',
@@ -61,6 +69,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
     tierLimit: ''
   });
   const [saving, setSaving] = useState(false);
+  const [folderRefreshKey, setFolderRefreshKey] = useState(0);
 
   const startEditing = () => {
     if (!employee) return;
@@ -92,14 +101,14 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
       } else {
         alert(data.error || 'Failed to update employee.');
       }
-    } catch (err) {
+    } catch {
       alert('Failed to connect to the server.');
     } finally {
       setSaving(false);
     }
   };
 
-  const fetchProfile = () => {
+  const fetchProfile = useCallback(() => {
     setLoading(true);
     fetch(`/api/employees/${employeeId}`)
       .then(res => res.json())
@@ -107,16 +116,26 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
         if (data.success) setEmployee(data.employee);
       })
       .finally(() => setLoading(false));
-  };
+  }, [employeeId]);
 
   useEffect(() => {
     fetchProfile();
-  }, [employeeId]);
+  }, [fetchProfile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
     }
+  };
+
+  const syncUsage = () => {
+    if (!onUsageChange) return;
+    fetch('/api/usage')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) onUsageChange({ used: data.used, limit: data.limit });
+      })
+      .catch(() => {});
   };
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
@@ -125,7 +144,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
 
     setUploading(true);
     setBatchResults([]);
-    const results: any[] = [];
+    const results: UploadResult[] = [];
 
     for (let i = 0; i < files.length; i++) {
       setCurrentUploadIndex(i);
@@ -144,7 +163,8 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
         } else {
           results.push({ fileName: files[i].name, success: false, error: data.error });
         }
-      } catch (err) {
+        syncUsage();
+      } catch {
         results.push({ fileName: files[i].name, success: false, error: 'Connection failed.' });
       }
     }
@@ -153,12 +173,13 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
     setFiles([]);
     setUploading(false);
     fetchProfile();
+    setFolderRefreshKey(key => key + 1);
 
     // Auto-surface the first flagged/denied result, if any
     const firstProblem = results.find(
       r => r.success && (r.data.audit.status === 'FLAGGED' || r.data.audit.status === 'DENIED')
     );
-    if (firstProblem) {
+    if (firstProblem?.success) {
       setReasonModalData(firstProblem.data);
     }
   };
@@ -184,7 +205,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
       } else {
         setCloseMessage(data.details || data.error || 'Failed to close month.');
       }
-    } catch (err) {
+    } catch {
       setCloseMessage('Failed to connect to the payout engine.');
     } finally {
       setClosing(false);
@@ -207,7 +228,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
       } else {
         alert(data.error || 'Failed to delete employee.');
       }
-    } catch (err) {
+    } catch {
       alert('Failed to connect to the server.');
     }
   };
@@ -374,9 +395,17 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
           </div>
 
           {uploading && (
-            <p className="text-xs text-slate-400 font-mono">
-              Processing {currentUploadIndex + 1} of {files.length}...
-            </p>
+            <div className="space-y-1.5">
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-blue-600 via-indigo-400 to-blue-600 animate-pulse transition-all duration-300"
+                  style={{ width: `${Math.max(((currentUploadIndex + 1) / files.length) * 100, 8)}%` }}
+                />
+              </div>
+              <p className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">
+                Analyzing {currentUploadIndex + 1} / {files.length}
+              </p>
+            </div>
           )}
 
           <div className="flex justify-end">
@@ -385,7 +414,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
               disabled={files.length === 0 || uploading}
               className="px-6 py-2.5 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-800 text-white disabled:text-slate-500 font-semibold text-xs rounded-xl tracking-wide uppercase transition-all duration-200 disabled:cursor-not-allowed"
             >
-              {uploading ? 'Analyzing...' : `Run Audit Analytics${files.length > 1 ? ` (${files.length})` : ''}`}
+              {uploading ? <span className="inline-block animate-pulse">Analyzing</span> : `Run Audit Analytics${files.length > 1 ? ` (${files.length})` : ''}`}
             </button>
           </div>
         </form>
@@ -413,7 +442,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
                       </span>
                       {(result.data.audit.status === 'FLAGGED' || result.data.audit.status === 'DENIED') && (
                         <button
-                          onClick={() => setReasonModalData(result.data)}
+                          onClick={() => result.success && setReasonModalData(result.data)}
                           className="text-[10px] font-semibold text-blue-400 hover:text-blue-300 underline underline-offset-2"
                         >
                           View Reason
@@ -491,7 +520,7 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {Object.entries(closeResult.categoryBreakdown as Record<string, number>).map(([bucket, amount]) => (
+              {Object.entries(closeResult.categoryBreakdown).map(([bucket, amount]) => (
                 <div key={bucket} className="bg-white/5 rounded-lg p-2 text-center">
                   <span className="text-[9px] font-mono text-slate-500 uppercase block">{bucket}</span>
                   <span className="text-xs font-bold text-white">₹{amount.toFixed(0)}</span>
@@ -502,43 +531,18 @@ export default function EmployeeDetail({ employeeId, onBack }: EmployeeDetailPro
         )}
       </div>
 
-      {/* Expense History */}
+      {/* Receipt Folders — organised by year & month */}
       <div className="space-y-3">
         <span className="text-xs font-mono text-slate-500 uppercase tracking-wider block font-bold">
-          Overall History ({employee.history.length})
+          Receipt Folders — organised by year &amp; month
         </span>
-        <div className="space-y-2">
-          {employee.history.map(exp => (
-            <div
-              key={exp.id}
-              className="bg-white/5 border border-white/5 rounded-xl p-4 flex items-center justify-between"
-            >
-              <div>
-                <p className="text-sm font-bold text-white">{exp.merchant}</p>
-                <p className="text-xs text-slate-500">
-                  {exp.category} · {new Date(exp.timestamp).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-mono text-white">{exp.currency} {exp.amount.toFixed(2)}</span>
-                {exp.audit && (
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${exp.audit.status === 'DENIED' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                    exp.audit.status === 'FLAGGED' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
-                      'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    }`}>
-                    {exp.audit.status}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ReceiptFolders key={folderRefreshKey} employeeId={employeeId} />
         {reasonModalData && (
           <AuditReasonModal
             merchant={reasonModalData.expense.merchant}
             amount={reasonModalData.expense.amount}
             currency={reasonModalData.expense.currency}
-            status={reasonModalData.audit.status}
+            status={reasonModalData.audit.status === 'DENIED' ? 'DENIED' : 'FLAGGED'}
             riskScore={reasonModalData.audit.riskScore}
             anomalies={reasonModalData.audit.anomalies}
             onClose={() => setReasonModalData(null)}

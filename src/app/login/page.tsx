@@ -34,7 +34,7 @@ export default function LoginPage() {
       } else {
         setError(data.error || 'Login failed.');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to connect to the server.');
     } finally {
       setSubmitting(false);
