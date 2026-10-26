@@ -210,8 +210,11 @@ export default function ReceiptFolders({ employeeId, selectedYear, onYearChange,
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-mono text-white">
                       {receipt.currency} {receipt.amount.toFixed(2)}
-                      {receipt.amountUsd != null && (
+                      {receipt.conversionStatus === 'CONVERTED' && receipt.amountUsd != null && (
                         <span className="text-slate-400 ml-1">(≈${receipt.amountUsd.toFixed(2)} USD)</span>
+                      )}
+                      {(receipt.conversionStatus === 'PENDING_REVIEW' || receipt.conversionStatus === 'FAILED') && (
+                        <span className="text-amber-400 ml-1 text-xs">(Conversion unavailable)</span>
                       )}
                     </span>
                     {receipt.status && (
