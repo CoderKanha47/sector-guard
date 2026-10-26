@@ -472,28 +472,43 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
             <p className="text-xs text-slate-500 mt-0.5">Locks in the reimbursement total for the selected month.</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(Number(e.target.value))}
-              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m} className="bg-slate-900">
-                  {new Date(2000, m - 1).toLocaleString('default', { month: 'short' })}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Year</span>
+              <select
+                value={selectedYear}
+                onChange={e => setSelectedYear(Number(e.target.value))}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 shrink-0"
+              >
+                {Array.from({ length: 100 }, (_, i) => 2000 + i).map(y => (
+                  <option key={y} value={y} className="bg-slate-900">{y}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Month</span>
+              <span className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white shrink-0 min-w-[90px]">
+                {new Date(2000, selectedMonth - 1).toLocaleString('default', { month: 'short' })}
+              </span>
+            </div>
+
             <button
               onClick={handleCloseMonth}
-              disabled={closing}
-              className="flex items-center gap-2 px-4 py-1.5 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold text-xs rounded-lg uppercase tracking-wide transition-all shrink-0"
+              disabled={closing || !selectedMonth}
+              className="flex items-center gap-2 px-4 py-1.5 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-lg uppercase tracking-wide transition-all shrink-0"
             >
               <Lock className="w-3.5 h-3.5" />
               {closing ? 'Closing...' : 'Close'}
             </button>
           </div>
         </div>
+
+        {!selectedMonth && (
+          <p className="text-xs text-amber-400 mt-3 font-mono text-center">
+            Click a month in the Receipt Folders below to select a month for payout closure.
+          </p>
+        )}
 
         {closeMessage && (
           <p className="text-xs text-red-400 mt-3 font-mono">{closeMessage}</p>
