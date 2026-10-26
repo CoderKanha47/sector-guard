@@ -52,6 +52,8 @@ interface ReceiptFoldersProps {
   employeeId: string;
   selectedYear: number;
   onYearChange: (year: number) => void;
+  selectedMonth: number;
+  onMonthChange: (month: number) => void;
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -65,7 +67,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export default function ReceiptFolders({ employeeId, selectedYear, onYearChange }: ReceiptFoldersProps) {
+export default function ReceiptFolders({ employeeId, selectedYear, onYearChange, selectedMonth, onMonthChange }: ReceiptFoldersProps) {
   const [folders, setFolders] = useState<YearFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMonth, setOpenMonth] = useState<{ year: number; folder: MonthFolder } | null>(null);
@@ -232,16 +234,23 @@ export default function ReceiptFolders({ employeeId, selectedYear, onYearChange 
           {Array.from({ length: 12 }, (_, i) => i + 1).map(monthNum => {
             const folder = currentYear.months.find(m => m.month === monthNum);
             const hasReceipts = !!folder && folder.count > 0;
+            const isSelected = selectedMonth === monthNum;
 
             return (
               <button
                 key={monthNum}
-                onClick={() => hasReceipts && folder && openMonthFolder(currentYear.year, folder)}
-                disabled={!hasReceipts}
+                onClick={() => {
+                  onMonthChange(monthNum);
+                  if (hasReceipts && folder) {
+                    openMonthFolder(currentYear.year, folder);
+                  }
+                }}
                 className={`text-left rounded-xl p-4 border transition-all duration-200 ${
-                  hasReceipts
+                  isSelected
+                    ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/50'
+                    : hasReceipts
                     ? 'bg-white/5 border-white/5 hover:border-blue-500/40 hover:bg-white/10 cursor-pointer'
-                    : 'bg-white/[0.02] border-white/5 opacity-40 cursor-not-allowed'
+                    : 'bg-white/[0.02] border-white/5 opacity-60 cursor-pointer'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">

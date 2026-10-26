@@ -534,6 +534,8 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
           employeeId={employeeId}
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
         />
         {reasonModalData && (
           <AuditReasonModal

@@ -55,6 +55,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   const fetchProfile = useCallback(() => {
     fetch(`/api/employees/${employeeId}`)
@@ -233,6 +234,8 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
           employeeId={employeeId}
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
         />
       </div>
     </div>
