@@ -49,9 +49,6 @@ interface CloseResult {
 export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: EmployeeDetailProps) {
   const [employee, setEmployee] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const now = new Date();
-  const [payoutYear, setPayoutYear] = useState(now.getFullYear());
-  const [payoutMonth, setPayoutMonth] = useState(now.getMonth() + 1);
   const [closing, setClosing] = useState(false);
   const [closeMessage, setCloseMessage] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -70,6 +67,11 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
   });
   const [saving, setSaving] = useState(false);
   const [folderRefreshKey, setFolderRefreshKey] = useState(0);
+
+  // Unified year/month state shared between folder view and close payout
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
 
   const startEditing = () => {
     if (!employee) return;
@@ -194,8 +196,8 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employeeId,
-          year: payoutYear,
-          month: payoutMonth
+          year: selectedYear,
+          month: selectedMonth
         })
       });
       const data = await res.json();
@@ -472,8 +474,8 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
 
           <div className="flex items-center gap-2">
             <select
-              value={payoutMonth}
-              onChange={e => setPayoutMonth(Number(e.target.value))}
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(Number(e.target.value))}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
@@ -483,8 +485,8 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
               ))}
             </select>
             <select
-              value={payoutYear}
-              onChange={e => setPayoutYear(Number(e.target.value))}
+              value={selectedYear}
+              onChange={e => setSelectedYear(Number(e.target.value))}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
             >
               {Array.from({ length: 100 }, (_, i) => 2000 + i).map(y => (
@@ -531,12 +533,17 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
         )}
       </div>
 
-      {/* Receipt Folders — organised by year & month */}
+{/* Receipt Folders — organised by year & month */}
       <div className="space-y-3">
         <span className="text-xs font-mono text-slate-500 uppercase tracking-wider block font-bold">
-          Receipt Folders — organised by year &amp; month
+          Receipt Folders — organised by year & month
         </span>
-        <ReceiptFolders key={folderRefreshKey} employeeId={employeeId} />
+        <ReceiptFolders
+          key={folderRefreshKey}
+          employeeId={employeeId}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        />
         {reasonModalData && (
           <AuditReasonModal
             merchant={reasonModalData.expense.merchant}

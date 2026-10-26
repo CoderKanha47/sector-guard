@@ -49,6 +49,8 @@ export interface FolderReceipt {
 
 interface ReceiptFoldersProps {
   employeeId: string;
+  selectedYear?: number;
+  onYearChange?: (year: number) => void;
 }
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -57,7 +59,7 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   APPROVED: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
 };
 
-export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
+export default function ReceiptFolders({ employeeId, selectedYear: controlledYear, onYearChange }: ReceiptFoldersProps) {
   const [folders, setFolders] = useState<YearFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -78,19 +80,27 @@ export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
             full.push(byYear.get(y) ?? { year: y, totalReceipts: 0, months: [] });
           }
           setFolders(full);
-          setSelectedYear(prev => {
+          const yearToUse = controlledYear ?? ((prev: number | null) => {
             if (prev !== null && full.some(y => y.year === prev)) return prev;
             const firstWithData = full.find(y => y.totalReceipts > 0);
             return firstWithData ? firstWithData.year : new Date().getFullYear();
           });
+          setSelectedYear(prev => typeof yearToUse === 'function' ? yearToUse(prev) : yearToUse);
         }
       })
       .finally(() => setLoading(false));
-  }, [employeeId]);
+  }, [employeeId, controlledYear]);
 
   useEffect(() => {
     fetchFolders();
   }, [fetchFolders]);
+
+  // Sync with parent when controlled year changes
+  useEffect(() => {
+    if (controlledYear !== undefined && controlledYear !== selectedYear) {
+      setSelectedYear(controlledYear);
+    }
+  }, [controlledYear, selectedYear]);
 
   const openMonthFolder = (year: number, folder: MonthFolder) => {
     setOpenMonth({ year, folder });
@@ -107,8 +117,12 @@ export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
   const closeMonthFolder = () => {
     setOpenMonth(null);
     setReceipts([]);
-    setLoading(true);
-    fetchFolders();
+    // Don't reset selectedYear or refetch folders - keep parent in sync
+  };
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    onYearChange?.(year);
   };
 
   if (loading) {
@@ -136,7 +150,7 @@ export default function ReceiptFolders({ employeeId }: ReceiptFoldersProps) {
           {folders.map(y => (
             <button
               key={y.year}
-              onClick={() => setSelectedYear(y.year)}
+              onClick={() => handleYearChange(y.year)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                 currentYear.year === y.year
                   ? 'bg-blue-500/10 border-blue-500/40 text-blue-300'
