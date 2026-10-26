@@ -6,7 +6,7 @@ import {
   getSupportedCurrencies,
   getConversionMetadata 
 } from '../src/lib/currency/converter.ts';
-import { FIXED_USD_RATES, FIXED_RATE_REFERENCE_DATE, FIXED_RATE_VERSION, FIXED_RATE_SOURCE } from '../src/lib/currency/fixedRates.ts';
+import { FIXED_USD_RATES, FIXED_RATE_REFERENCE_DATE, FIXED_RATE_VERSION, FIXED_RATE_SOURCE } from '../src/lib/currency/fixedRates.js';
 
 test('USD to USD conversion equals exactly 1:1', () => {
   const result = convertToUsd(100, 'USD', new Date('2024-01-15'));

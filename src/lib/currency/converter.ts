@@ -5,7 +5,7 @@ import {
   getRateMetadata,
   FIXED_RATE_REFERENCE_DATE,
   FIXED_RATE_VERSION
-} from './fixedRates.ts';
+} from './fixedRates.js';
 
 interface ConversionResult {
   amountUsd: number;
