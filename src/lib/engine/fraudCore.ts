@@ -1,8 +1,11 @@
 import { type Prisma } from '@prisma/client';
 import { evaluateReceipt, type ReceiptData } from './fraudRules';
+import { convertPolicyLimitToUsd } from '@/lib/currency/converter';
 
 export interface AuditResult {
   calculatedReimbursement: number;
+  calculatedReimbursementUsd: number | null;
+  policyLimitUsd: number | null;
   riskScore: number;
   status: 'APPROVED' | 'FLAGGED' | 'DENIED';
   anomalies: Array<{ type: string; description: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' }>;
@@ -20,6 +23,8 @@ export async function executeFraudAudit(
 
   const currentAmount = Number(parsedData.amount);
   const currentTimestamp = new Date(parsedData.dateTime);
+  const currentCurrency = parsedData.currency;
+  const currentAmountUsd = (parsedData as any).amountUsd ?? null;
 
   const recentExpenses = await tx.expense.findMany({
     where: {
@@ -32,17 +37,40 @@ export async function executeFraudAudit(
     }
   });
 
+  const policyLimitConversion = await convertPolicyLimitToUsd(
+    Number(employee.tierLimit),
+    employee.tierLimitCurrency,
+    currentTimestamp
+  );
+
   const decision = evaluateReceipt({
-    employeeTierLimit: Number(employee.tierLimit),
+    employeeTierLimit: policyLimitConversion.limitUsd > 0 ? policyLimitConversion.limitUsd : Number(employee.tierLimit),
+    employeeTierLimitOriginal: Number(employee.tierLimit),
+    employeeTierLimitCurrency: employee.tierLimitCurrency,
     currentRating: Number(employee.rating),
     current: {
       id: currentExpenseId ?? '',
-      amount: currentAmount,
+      amount: currentAmountUsd ?? currentAmount,
+      amountOriginal: currentAmount,
+      currency: currentCurrency,
+      conversionStatus: parsedData.conversionStatus as 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED' | undefined,
+      fxRateDate: parsedData.fxRateDate ?? undefined,
       merchant: parsedData.merchant,
       timestamp: currentTimestamp,
       category: parsedData.category
     },
-    recentExpenses
+    recentExpenses: recentExpenses.map(exp => ({
+      id: exp.id,
+      amount: exp.amountUsd ?? exp.amount,
+      amountOriginal: exp.amount,
+      currency: exp.currency,
+      conversionStatus: exp.conversionStatus as 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED' | undefined,
+      fxRateDate: exp.fxRateDate ?? undefined,
+      merchant: exp.merchant,
+      timestamp: exp.timestamp,
+      category: exp.category
+    })),
+    policyLimitConversion
   });
 
   await tx.employee.update({
@@ -52,6 +80,8 @@ export async function executeFraudAudit(
 
   return {
     calculatedReimbursement: decision.calculatedReimbursement,
+    calculatedReimbursementUsd: decision.calculatedReimbursementUsd,
+    policyLimitUsd: policyLimitConversion.limitUsd > 0 ? policyLimitConversion.limitUsd : null,
     riskScore: decision.riskScore,
     status: decision.status,
     anomalies: decision.anomalies,

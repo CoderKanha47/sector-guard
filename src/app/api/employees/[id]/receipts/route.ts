@@ -10,6 +10,7 @@ const MONTH_NAMES = [
 interface MonthAccumulator {
   count: number;
   totalAmount: number;
+  totalAmountUsd: number;
   approvedCount: number;
   flaggedCount: number;
   deniedCount: number;
@@ -58,12 +59,19 @@ export async function GET(
         id: exp.id,
         merchant: exp.merchant,
         amount: exp.amount,
+        amountUsd: exp.amountUsd,
         currency: exp.currency,
+        fxRate: exp.fxRate,
+        fxRateDate: exp.fxRateDate,
+        fxProvider: exp.fxProvider,
+        conversionStatus: exp.conversionStatus,
         timestamp: exp.timestamp,
         category: exp.category,
         status: exp.audit?.status ?? null,
         riskScore: exp.audit?.riskScore ?? null,
         calculatedReimbursement: exp.audit?.calculatedReimbursement ?? null,
+        calculatedReimbursementUsd: exp.audit?.calculatedReimbursementUsd ?? null,
+        policyLimitUsd: exp.audit?.policyLimitUsd ?? null,
         anomalies: exp.audit?.anomalies.map(a => ({
           type: a.type,
           description: a.description,
@@ -103,6 +111,7 @@ export async function GET(
         monthsMap.set(month, {
           count: 0,
           totalAmount: 0,
+          totalAmountUsd: 0,
           approvedCount: 0,
           flaggedCount: 0,
           deniedCount: 0
@@ -111,6 +120,7 @@ export async function GET(
       const acc = monthsMap.get(month)!;
       acc.count++;
       acc.totalAmount += exp.amount;
+      acc.totalAmountUsd += exp.amountUsd ?? 0;
 
       if (exp.audit?.status === 'APPROVED') acc.approvedCount++;
       else if (exp.audit?.status === 'FLAGGED') acc.flaggedCount++;
@@ -126,6 +136,7 @@ export async function GET(
       .map(([year, monthsMap]) => ({
         year,
         totalReceipts: Array.from(monthsMap.values()).reduce((sum, m) => sum + m.count, 0),
+        totalAmountUsd: Array.from(monthsMap.values()).reduce((sum, m) => sum + m.totalAmountUsd, 0),
         months: Array.from(monthsMap.entries())
           .sort((a, b) => a[0] - b[0])
           .map(([month, acc]) => {
@@ -138,7 +149,9 @@ export async function GET(
                 ? {
                     status: payout.status,
                     totalClaimed: payout.totalClaimed,
+                    totalClaimedUsd: payout.totalClaimedUsd,
                     totalReimbursement: payout.totalReimbursement,
+                    totalReimbursementUsd: payout.totalReimbursementUsd,
                     paidAt: payout.paidAt
                   }
                 : null

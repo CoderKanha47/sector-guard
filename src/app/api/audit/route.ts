@@ -81,6 +81,11 @@ export async function POST(request: Request) {
           merchant: parsedReceiptData.merchant,
           amount: parsedReceiptData.amount,
           currency: parsedReceiptData.currency,
+          amountUsd: parsedReceiptData.amountUsd,
+          fxRate: parsedReceiptData.fxRate,
+          fxRateDate: parsedReceiptData.fxRateDate,
+          fxProvider: parsedReceiptData.fxProvider,
+          conversionStatus: parsedReceiptData.conversionStatus,
           timestamp: parsedReceiptData.dateTime,
           category: parsedReceiptData.category,
           lineItems: parsedReceiptData.lineItems as unknown as Prisma.InputJsonValue
@@ -93,6 +98,8 @@ export async function POST(request: Request) {
         data: {
           expenseId: savedExpense.id,
           calculatedReimbursement: auditMetrics.calculatedReimbursement,
+          calculatedReimbursementUsd: auditMetrics.calculatedReimbursementUsd,
+          policyLimitUsd: auditMetrics.policyLimitUsd,
           riskScore: auditMetrics.riskScore,
           status: auditMetrics.status,
           anomalies: {

@@ -19,20 +19,24 @@ interface EmployeeProfile {
   designation: string;
   address: string;
   tierLimit: number;
+  tierLimitCurrency: string;
   rating: number;
   billsUploaded: number;
   reimbursementsPaid: number;
+  reimbursementsPaidUsd: number;
 }
 
 interface AuditData {
   status: 'APPROVED' | 'FLAGGED' | 'DENIED';
   riskScore: number;
   calculatedReimbursement: number;
+  calculatedReimbursementUsd?: number;
+  policyLimitUsd?: number;
   anomalies: Array<{ type: string; description: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' }>;
 }
 
 interface UploadPayload {
-  expense: { merchant: string; amount: number; currency: string };
+  expense: { merchant: string; amount: number; currency: string; amountUsd?: number; fxRate?: number; conversionStatus?: string };
   audit: AuditData;
 }
 
@@ -42,8 +46,11 @@ type UploadResult =
 
 interface CloseResult {
   totalClaimed: number;
+  totalClaimedUsd?: number;
   totalReimbursement: number;
+  totalReimbursementUsd?: number;
   categoryBreakdown: Record<string, number>;
+  categoryBreakdownUsd?: Record<string, number>;
 }
 
 export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: EmployeeDetailProps) {
@@ -310,7 +317,7 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
                 <MapPin className="w-3.5 h-3.5" /> {employee.address}
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                Tier Limit: <span className="font-mono text-slate-300">{employee.tierLimit}</span>
+                Tier Limit: <span className="font-mono text-slate-300">{employee.tierLimit} {employee.tierLimitCurrency}</span>
               </p>
             </div>
           )}
@@ -434,7 +441,10 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-mono text-white">
-                        {result.data.expense.currency} {result.data.expense.amount}
+                        {result.data.expense.currency} {result.data.expense.amount.toFixed(2)}
+                        {result.data.expense.amountUsd != null && (
+                          <span className="text-slate-400 ml-1">(≈${result.data.expense.amountUsd.toFixed(2)} USD)</span>
+                        )}
                       </span>
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${result.data.audit.status === 'DENIED' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
                         result.data.audit.status === 'FLAGGED' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
@@ -519,11 +529,17 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Claimed</span>
-                <span className="text-sm font-bold text-white">₹{closeResult.totalClaimed.toFixed(2)}</span>
+                <span className="text-sm font-bold text-white">{closeResult.totalClaimed.toFixed(2)}</span>
+                {closeResult.totalClaimedUsd != null && (
+                  <span className="text-xs text-slate-400 block mt-0.5">≈${closeResult.totalClaimedUsd.toFixed(2)} USD</span>
+                )}
               </div>
               <div>
                 <span className="text-[10px] font-mono text-slate-500 uppercase block">Paid (Capped at Tier Limit)</span>
-                <span className="text-sm font-bold text-emerald-400">₹{closeResult.totalReimbursement.toFixed(2)}</span>
+                <span className="text-sm font-bold text-emerald-400">{closeResult.totalReimbursement.toFixed(2)}</span>
+                {closeResult.totalReimbursementUsd != null && (
+                  <span className="text-xs text-slate-400 block mt-0.5">≈${closeResult.totalReimbursementUsd.toFixed(2)} USD</span>
+                )}
               </div>
             </div>
 
@@ -531,7 +547,10 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
               {Object.entries(closeResult.categoryBreakdown).map(([bucket, amount]) => (
                 <div key={bucket} className="bg-white/5 rounded-lg p-2 text-center">
                   <span className="text-[9px] font-mono text-slate-500 uppercase block">{bucket}</span>
-                  <span className="text-xs font-bold text-white">₹{amount.toFixed(0)}</span>
+                  <span className="text-xs font-bold text-white">{amount.toFixed(0)}</span>
+                  {closeResult.categoryBreakdownUsd?.[bucket] != null && (
+                    <span className="text-[9px] text-slate-400 block mt-0.5">≈${closeResult.categoryBreakdownUsd[bucket].toFixed(0)} USD</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -552,10 +571,11 @@ export default function EmployeeDetail({ employeeId, onBack, onUsageChange }: Em
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
         />
-        {reasonModalData && (
+{reasonModalData && (
           <AuditReasonModal
             merchant={reasonModalData.expense.merchant}
             amount={reasonModalData.expense.amount}
+            amountUsd={reasonModalData.expense.amountUsd}
             currency={reasonModalData.expense.currency}
             status={reasonModalData.audit.status === 'DENIED' ? 'DENIED' : 'FLAGGED'}
             riskScore={reasonModalData.audit.riskScore}

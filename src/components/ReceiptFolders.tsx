@@ -39,12 +39,19 @@ export interface FolderReceipt {
   id: string;
   merchant: string;
   amount: number;
+  amountUsd?: number;
   currency: string;
+  fxRate?: number;
+  fxRateDate?: string;
+  fxProvider?: string;
+  conversionStatus?: string;
   timestamp: string;
   category: string;
   status: 'APPROVED' | 'FLAGGED' | 'DENIED' | null;
   riskScore: number | null;
   calculatedReimbursement: number | null;
+  calculatedReimbursementUsd?: number;
+  policyLimitUsd?: number;
   anomalies: Array<{ type: string; description: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' }>;
 }
 
@@ -204,6 +211,9 @@ export default function ReceiptFolders({ employeeId, selectedYear, onYearChange,
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-mono text-white">
                       {receipt.currency} {receipt.amount.toFixed(2)}
+                      {receipt.amountUsd != null && (
+                        <span className="text-slate-400 ml-1">(≈${receipt.amountUsd.toFixed(2)} USD)</span>
+                      )}
                     </span>
                     {receipt.status && (
                       <span
@@ -315,6 +325,7 @@ export default function ReceiptFolders({ employeeId, selectedYear, onYearChange,
         <AuditReasonModal
           merchant={reasonReceipt.merchant}
           amount={reasonReceipt.amount}
+          amountUsd={reasonReceipt.amountUsd}
           currency={reasonReceipt.currency}
           status={reasonReceipt.status === 'DENIED' ? 'DENIED' : 'FLAGGED'}
           riskScore={reasonReceipt.riskScore ?? 0}

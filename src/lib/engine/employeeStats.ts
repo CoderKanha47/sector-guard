@@ -22,12 +22,14 @@ export async function getEmployeeProfile(employeeId: string) {
   let flaggedCount = 0;
   let deniedCount = 0;
   let reimbursementsPaid = 0;
+  let reimbursementsPaidUsd = 0;
 
   for (const exp of employee.expenses) {
     const status = exp.audit?.status;
     if (status === 'APPROVED') {
       approvedCount++;
       reimbursementsPaid += exp.audit?.calculatedReimbursement ?? 0;
+      reimbursementsPaidUsd += exp.audit?.calculatedReimbursementUsd ?? 0;
     } else if (status === 'FLAGGED') {
       flaggedCount++;
     } else if (status === 'DENIED') {
@@ -44,9 +46,11 @@ export async function getEmployeeProfile(employeeId: string) {
     designation: employee.designation,
     address: employee.address,
     tierLimit: employee.tierLimit,
+    tierLimitCurrency: employee.tierLimitCurrency,
     rating: employee.rating,
     billsUploaded,
     reimbursementsPaid,
+    reimbursementsPaidUsd,
     approvedCount,
     flaggedCount,
     deniedCount,
@@ -57,7 +61,9 @@ export async function getEmployeeProfile(employeeId: string) {
       month: p.month,
       status: p.status,
       totalClaimed: p.totalClaimed,
+      totalClaimedUsd: p.totalClaimedUsd,
       totalReimbursement: p.totalReimbursement,
+      totalReimbursementUsd: p.totalReimbursementUsd,
       expenseCount: p.expenseCount,
       closedAt: p.closedAt,
       paidAt: p.paidAt
@@ -67,7 +73,6 @@ export async function getEmployeeProfile(employeeId: string) {
 }
 
 export async function getMonthlyReimbursement(employeeId: string, year: number, month: number) {
-  // month is 1-12
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 1);
 
@@ -86,10 +91,18 @@ export async function getMonthlyReimbursement(employeeId: string, year: number, 
     return sum;
   }, 0);
 
+  const totalReimbursementUsd = result.reduce((sum, exp) => {
+    if (exp.audit?.status === 'APPROVED') {
+      return sum + (exp.audit.calculatedReimbursementUsd ?? 0);
+    }
+    return sum;
+  }, 0);
+
   return {
     year,
     month,
     totalReimbursement,
+    totalReimbursementUsd,
     expenseCount: result.length
   };
 }
@@ -110,6 +123,13 @@ export async function getAllEmployeesSummary() {
       return sum;
     }, 0);
 
+    const reimbursementsPaidUsd = emp.expenses.reduce((sum, exp) => {
+      if (exp.audit?.status === 'APPROVED') {
+        return sum + (exp.audit.calculatedReimbursementUsd ?? 0);
+      }
+      return sum;
+    }, 0);
+
     return {
       id: emp.id,
       name: emp.name,
@@ -117,7 +137,8 @@ export async function getAllEmployeesSummary() {
       designation: emp.designation,
       rating: emp.rating,
       billsUploaded,
-      reimbursementsPaid
+      reimbursementsPaid,
+      reimbursementsPaidUsd
     };
   });
 }

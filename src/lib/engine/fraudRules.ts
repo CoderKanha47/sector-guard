@@ -13,22 +13,38 @@ export interface Anomaly {
 export interface ExpenseInput {
   id: string;
   amount: number;
+  amountOriginal?: number;
+  currency?: string;
+  conversionStatus?: 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED';
+  fxRateDate?: Date;
   merchant: string;
   timestamp: Date;
   category: string;
 }
 
+export interface PolicyLimitConversion {
+  limitUsd: number;
+  fxRate: number;
+  fxRateDate: Date;
+  fxProvider: string;
+  status: 'CONVERTED' | 'PENDING_REVIEW' | 'NOT_NEEDED';
+}
+
 export interface EvaluateContext {
   employeeTierLimit: number;
+  employeeTierLimitOriginal?: number;
+  employeeTierLimitCurrency?: string;
   currentRating: number;
   current: ExpenseInput;
   recentExpenses: ExpenseInput[];
+  policyLimitConversion?: PolicyLimitConversion;
 }
 
 export interface Decision {
   riskScore: number;
   status: AuditStatus;
   calculatedReimbursement: number;
+  calculatedReimbursementUsd: number | null;
   anomalies: Anomaly[];
   ratingDelta: number;
   newRating: number;
@@ -47,6 +63,11 @@ export interface ReceiptData {
   currency: string;
   category: string;
   lineItems: ReceiptLineItem[];
+  amountUsd?: number;
+  fxRate?: number;
+  fxRateDate?: Date;
+  fxProvider?: string;
+  conversionStatus?: 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED';
 }
 
 export function evaluateReceipt(ctx: EvaluateContext): Decision {
@@ -54,18 +75,42 @@ export function evaluateReceipt(ctx: EvaluateContext): Decision {
   let riskScore = 0;
 
   const currentAmount = Number(ctx.current.amount);
+  const currentAmountOriginal = Number(ctx.current.amountOriginal ?? ctx.current.amount);
+  const currentCurrency = ctx.current.currency || 'USD';
   const currentTimestamp = ctx.current.timestamp;
   const currentCategory = ctx.current.category;
   const currentMerchant = ctx.current.merchant;
   const employeeTierLimit = Number(ctx.employeeTierLimit);
+  const policyLimitConversion = ctx.policyLimitConversion;
 
   if (currentAmount > employeeTierLimit) {
+    const limitDisplay = ctx.employeeTierLimitOriginal 
+      ? `${ctx.employeeTierLimitOriginal} ${ctx.employeeTierLimitCurrency} (≈$${employeeTierLimit.toFixed(2)} USD)`
+      : `${employeeTierLimit} USD`;
     anomalies.push({
       type: 'POLICY_VIOLATION',
-      description: `Transaction amount (${currentAmount}) exceeds employee tier allowance limit of ${employeeTierLimit}.`,
+      description: `Transaction amount (${currentAmountOriginal} ${currentCurrency}, ≈$${currentAmount.toFixed(2)} USD) exceeds employee tier allowance limit of ${limitDisplay}.`,
       severity: 'LOW'
     });
     riskScore += 20;
+  }
+
+  if (policyLimitConversion?.status === 'PENDING_REVIEW') {
+    anomalies.push({
+      type: 'FX_RATE_UNAVAILABLE',
+      description: `Exchange rate for ${ctx.employeeTierLimitCurrency} -> USD unavailable on ${policyLimitConversion.fxRateDate.toISOString().split('T')[0]}. Monetary comparison used fallback or could not be completed.`,
+      severity: 'MEDIUM'
+    });
+    riskScore += 10;
+  }
+
+  if (ctx.current.conversionStatus === 'PENDING_REVIEW') {
+    anomalies.push({
+      type: 'FX_RATE_UNAVAILABLE',
+      description: `Exchange rate for ${currentCurrency} -> USD unavailable on ${ctx.current.fxRateDate?.toISOString().split('T')[0]}. Receipt amount converted using fallback rate or marked for review.`,
+      severity: 'MEDIUM'
+    });
+    riskScore += 10;
   }
 
   const suspectedSplits = ctx.recentExpenses.filter(exp =>
@@ -79,7 +124,7 @@ export function evaluateReceipt(ctx: EvaluateContext): Decision {
     if (totalSplitAmount > employeeTierLimit) {
       anomalies.push({
         type: 'SPLIT_RECEIPT',
-        description: `Potential receipt splitting detected at ${currentMerchant}. Multiple transactions sum to ${totalSplitAmount}, bypassing the single limit threshold.`,
+        description: `Potential receipt splitting detected at ${currentMerchant}. Multiple transactions sum to ≈$${totalSplitAmount.toFixed(2)} USD, bypassing the single limit threshold of ≈$${employeeTierLimit.toFixed(2)} USD.`,
         severity: 'HIGH'
       });
       riskScore += 50;
@@ -105,7 +150,8 @@ export function evaluateReceipt(ctx: EvaluateContext): Decision {
   if (riskScore >= 60) status = 'DENIED';
   else if (riskScore > 0) status = 'FLAGGED';
 
-  const calculatedReimbursement = status === 'DENIED' ? 0 : Math.min(currentAmount, employeeTierLimit);
+  const calculatedReimbursement = status === 'DENIED' ? 0 : Math.min(currentAmountOriginal, ctx.employeeTierLimitOriginal ?? currentAmountOriginal);
+  const calculatedReimbursementUsd = status === 'DENIED' ? 0 : Math.min(currentAmount, employeeTierLimit);
 
   let ratingDelta = 0;
   if (status === 'APPROVED') {
@@ -122,6 +168,7 @@ export function evaluateReceipt(ctx: EvaluateContext): Decision {
     riskScore,
     status,
     calculatedReimbursement,
+    calculatedReimbursementUsd,
     anomalies,
     ratingDelta,
     newRating

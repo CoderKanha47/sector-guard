@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parseDocumentWithGroq, RECEIPT_CATEGORIES } from './promptEngine';
 import type { ReceiptData, ReceiptLineItem } from '@/lib/engine/fraudRules';
+import { convertToUsd } from '@/lib/currency/converter';
 
 export class ReceiptValidationError extends Error {
   constructor(message: string) {
@@ -47,23 +48,43 @@ function describeValidationError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export interface ValidatedReceiptData extends ReceiptData {
+  amountUsd: number;
+  fxRate: number;
+  fxRateDate: Date;
+  fxProvider: string;
+  conversionStatus: 'CONVERTED' | 'PENDING_REVIEW' | 'FAILED' | 'NOT_NEEDED';
+}
+
 export async function parseAndValidateReceipt(
   imageBuffer: Buffer,
   mimeType: string = 'image/jpeg',
   attempts: number = 2
-): Promise<ReceiptData> {
+): Promise<ValidatedReceiptData> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       const raw = await parseDocumentWithGroq(imageBuffer, mimeType);
       const validated = receiptDataSchema.parse(raw);
-      return {
+      
+      const baseData = {
         merchant: String(validated.merchant).trim(),
         dateTime: new Date(validated.dateTime as string),
         amount: Number(validated.amount),
         currency: String(validated.currency || 'INR').toUpperCase(),
         category: normalizeCategory(validated.category),
         lineItems: (validated.lineItems || []) as ReceiptLineItem[]
+      };
+
+      const conversion = await convertToUsd(baseData.amount, baseData.currency, baseData.dateTime);
+
+      return {
+        ...baseData,
+        amountUsd: conversion.amountUsd,
+        fxRate: conversion.fxRate,
+        fxRateDate: conversion.fxRateDate,
+        fxProvider: conversion.fxProvider,
+        conversionStatus: conversion.conversionStatus
       };
     } catch (error) {
       lastError = error;

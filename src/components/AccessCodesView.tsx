@@ -11,6 +11,7 @@ interface EmployeeAccessCode {
   accessCode: string;
   rating: number;
   tierLimit: number;
+  tierLimitCurrency: string;
 }
 
 export default function AccessCodesView() {
@@ -149,7 +150,7 @@ export default function AccessCodesView() {
                     </span>
                   </td>
                   <td className="py-3 font-mono text-slate-300 text-sm">
-                    ₹{emp.tierLimit.toLocaleString()}
+                    {emp.tierLimitCurrency} {emp.tierLimit.toLocaleString()}
                   </td>
                 </tr>
               );

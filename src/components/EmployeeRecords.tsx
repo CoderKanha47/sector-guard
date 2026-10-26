@@ -26,7 +26,9 @@ interface PayoutRecord {
   month: number;
   status: string;
   totalClaimed: number;
+  totalClaimedUsd?: number;
   totalReimbursement: number;
+  totalReimbursementUsd?: number;
   expenseCount: number;
   paidAt: string | null;
 }
@@ -38,9 +40,11 @@ interface MyProfile {
   designation: string;
   address: string;
   tierLimit: number;
+  tierLimitCurrency: string;
   rating: number;
   billsUploaded: number;
   reimbursementsPaid: number;
+  reimbursementsPaidUsd: number;
   approvedCount: number;
   flaggedCount: number;
   deniedCount: number;
@@ -100,7 +104,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
     },
     {
       label: 'Reimbursements Paid',
-      value: `₹${profile.reimbursementsPaid.toFixed(2)}`,
+      value: `${profile.tierLimitCurrency} ${profile.reimbursementsPaid.toFixed(2)} ${profile.reimbursementsPaidUsd > 0 ? `(≈$${profile.reimbursementsPaidUsd.toFixed(2)} USD)` : ''}`,
       icon: IndianRupee,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10'
@@ -149,7 +153,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
               <MapPin className="w-3.5 h-3.5" /> {profile.address}
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              Tier Limit: <span className="font-mono text-slate-300">{profile.tierLimit}</span>
+              Tier Limit: <span className="font-mono text-slate-300">{profile.tierLimit} {profile.tierLimitCurrency}</span>
             </p>
           </div>
 
@@ -204,10 +208,12 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono text-slate-400">
-                    claimed ₹{payout.totalClaimed.toFixed(2)}
+                    claimed {payout.totalClaimed.toFixed(2)}
+                    {payout.totalClaimedUsd != null && <span className="text-slate-400 ml-1">(≈${payout.totalClaimedUsd.toFixed(2)} USD)</span>}
                   </span>
                   <span className="text-sm font-mono font-bold text-emerald-400">
-                    ₹{payout.totalReimbursement.toFixed(2)}
+                    {payout.totalReimbursement.toFixed(2)}
+                    {payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1">(≈${payout.totalReimbursementUsd.toFixed(2)} USD)</span>}
                   </span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${

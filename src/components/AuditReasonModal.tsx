@@ -13,6 +13,7 @@ interface Anomaly {
 interface AuditReasonModalProps {
   merchant: string;
   amount: number;
+  amountUsd?: number;
   currency: string;
   status: 'FLAGGED' | 'DENIED';
   riskScore: number;
@@ -21,7 +22,7 @@ interface AuditReasonModalProps {
 }
 
 export default function AuditReasonModal({
-  merchant, amount, currency, status, riskScore, anomalies, onClose
+  merchant, amount, amountUsd, currency, status, riskScore, anomalies, onClose
 }: AuditReasonModalProps) {
   const isDenied = status === 'DENIED';
 
@@ -39,6 +40,7 @@ export default function AuditReasonModal({
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 {merchant} · {currency} {amount}
+                {amountUsd != null && <span className="text-slate-400 ml-1">(≈${amountUsd.toFixed(2)} USD)</span>}
               </p>
             </div>
           </div>
