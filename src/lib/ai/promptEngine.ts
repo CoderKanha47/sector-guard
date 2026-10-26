@@ -38,7 +38,7 @@ export async function parseDocumentWithGroq(imageBuffer: Buffer, mimeType: strin
 
   try {
     const completion = await groq.chat.completions.create({
-      model: 'qwen/qwen3.6-27b',
+      model: 'qwen/qwen3.8-27b',
       messages: [
         {
           role: 'system',
