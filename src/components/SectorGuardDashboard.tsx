@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Home, Users, FolderOpen, Binary, BookOpen, ChevronRight } from 'lucide-react';
+import { Home, Users, FolderOpen, Binary, BookOpen, ChevronRight, Key } from 'lucide-react';
 import EmployeeList from '@/components/EmployeeList';
 import EmployeeDetail from '@/components/EmployeeDetail';
 import EmployeeRecords from '@/components/EmployeeRecords';
+import EmployeeAccessCodesView from '@/components/EmployeeAccessCodesView';
 import AboutModal from '@/components/AboutModal';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -18,14 +19,14 @@ interface SectorGuardDashboardProps {
 
 export default function SectorGuardDashboard({ role, userName, employeeId }: SectorGuardDashboardProps) {
     const isAdmin = role === 'admin';
-    const [activeTab, setActiveTab] = useState<'home' | 'employees' | 'records'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'employees' | 'records' | 'access-codes'>('home');
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [showAbout, setShowAbout] = useState(false);
     const [usageLive, setUsageLive] = useState<{ used: number; limit: number } | null>(null);
 
     const handleUsageChange = (usage: { used: number; limit: number }) => setUsageLive(usage);
 
-    const handleTabChange = (tab: 'home' | 'employees' | 'records') => {
+    const handleTabChange = (tab: 'home' | 'employees' | 'records' | 'access-codes') => {
         setActiveTab(tab);
         if (tab !== 'employees') {
             setSelectedEmployeeId(null);
@@ -83,16 +84,28 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                         </button>
 
                         {isAdmin ? (
-                            <button
-                                onClick={() => handleTabChange('employees')}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'employees'
-                                    ? 'bg-white/10 border-white/20 text-white shadow-md'
-                                    : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                                    }`}
-                            >
-                                <Users className="w-4 h-4" />
-                                <span>Employees</span>
-                            </button>
+                            <>
+                                <button
+                                    onClick={() => handleTabChange('employees')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'employees'
+                                        ? 'bg-white/10 border-white/20 text-white shadow-md'
+                                        : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                        }`}
+                                >
+                                    <Users className="w-4 h-4" />
+                                    <span>Employees</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('access-codes')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'access-codes'
+                                        ? 'bg-white/10 border-white/20 text-white shadow-md'
+                                        : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                        }`}
+                                >
+                                    <Key className="w-4 h-4" />
+                                    <span>Access Codes</span>
+                                </button>
+                            </>
                         ) : (
                             <button
                                 onClick={() => handleTabChange('records')}
@@ -197,6 +210,15 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                         ) : (
                             <EmployeeList onSelectEmployee={(id) => setSelectedEmployeeId(id)} />
                         )}
+                    </section>
+                ) : activeTab === 'access-codes' && isAdmin ? (
+                    <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
+                        <header className="mb-4">
+                            <h3 className="text-sm font-mono uppercase tracking-wider text-slate-400 font-bold">
+                                Employee Access Codes
+                            </h3>
+                        </header>
+                        <EmployeeAccessCodesView />
                     </section>
                 ) : (
                     <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
