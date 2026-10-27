@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         where: dateFilter.gte || dateFilter.lt ? { timestamp: dateFilter } : undefined,
       }),
       prisma.monthlyPayout.findMany({
-        where: year !== undefined ? { year } : undefined,
+        where: year !== undefined ? { year, ...(month !== undefined ? { month } : {}) } : undefined,
         orderBy: [{ year: 'desc' }, { month: 'desc' }]
       })
     ]);

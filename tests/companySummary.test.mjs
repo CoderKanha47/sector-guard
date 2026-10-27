@@ -1,6 +1,6 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server.js';
 
 // Mock Prisma
 const mockPrisma = {
@@ -176,7 +176,7 @@ test('Company Summary API - filters by year and month', async () => {
     version: '2026-10-21-v1',
     source: 'ExchangeRate-API historical data',
     supportedCurrencies: ['USD', 'INR', 'MYR']
-  });
+  }));
 
   const mockEmployee = createMockEmployee({
     expenses: [
@@ -222,12 +222,12 @@ test('Company Summary - calculates totals correctly with mixed currencies', asyn
   const { getConversionMetadata } = await import('../src/lib/currency/converter.ts');
   
   getSession.mock.mockImplementation(async () => ({ role: 'admin' }));
-  getConversionMetadata.mock.mockImplementation(() => ({
+getConversionMetadata.mock.mockImplementation(() => ({
     referenceDate: '2026-10-21',
     version: '2026-10-21-v1',
     source: 'ExchangeRate-API historical data',
-    supportedCurrencies: ['USD', 'INR', 'MYR', 'JPY', 'CNY', 'SAR', 'GBP', 'EUR', 'SGD', 'AED']
-  });
+    supportedCurrencies: ['USD', 'INR', 'MYR']
+  }));
 
   const mockEmployee = createMockEmployee({
     expenses: [
@@ -284,7 +284,7 @@ test('Company Summary - excludes PENDING_REVIEW and FAILED conversions from tota
     version: '2026-10-21-v1',
     source: 'ExchangeRate-API historical data',
     supportedCurrencies: ['USD', 'INR', 'MYR']
-  });
+  }));
 
   const mockEmployee = createMockEmployee({
     expenses: [
@@ -293,7 +293,7 @@ test('Company Summary - excludes PENDING_REVIEW and FAILED conversions from tota
       createMockExpense({ id: 'exp-3', amount: 300, currency: 'USD', amountUsd: 0, conversionStatus: 'FAILED' }),
     ],
     payouts: [],
-  );
+  });
 
   mockPrisma.employee.findMany.mock.mockImplementation(async () => [mockEmployee]);
   mockPrisma.expense.findMany.mock.mockImplementation(async () => mockEmployee.expenses);
