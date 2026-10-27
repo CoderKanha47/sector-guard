@@ -252,11 +252,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Failed to fetch company summary:", error);
-    return NextResponse.json(
-      process.env.NODE_ENV === 'production'
-        ? { error: "Failed to fetch company summary." }
-        : { error: "Failed to fetch company summary.", details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    });
+    const errorBody = process.env.NODE_ENV === 'production'
+      ? { error: "Failed to fetch company summary." }
+      : { error: "Failed to fetch company summary.", details: error instanceof Error ? error.message : String(error) };
+    return NextResponse.json(errorBody, { status: 500 });
   }
 }

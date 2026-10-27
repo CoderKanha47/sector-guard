@@ -269,37 +269,42 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
         Monthly Financial Trends (USD)
       </h3>
       <div className="flex items-end justify-between h-[200px] gap-2">
-        {trends.map((trend, index) => (
-          <div key={trend.month} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-[40px]">
-            <div className="w-full flex justify-center gap-1">
-              <div 
-                className="bg-blue-500/60 rounded-t"
-                style={{ 
-                  height: `${trend.claimedUsd > 0 ? (trend.claimedUsd / (maxValue || 1)) * 150 : 0}px`,
-                  minHeight: trend.claimedUsd > 0 ? '4px' : '0'
-                }
-                title={`Claimed: $${trend.claimedUsd.toFixed(2)}`}
-              />
-              <div 
-                className="bg-emerald-500/60 rounded-t"
-                style={{ 
-                  height: `${trend.approvedUsd > 0 ? (trend.approvedUsd / (maxValue || 1)) * 150 : 0}px`,
-                  minHeight: trend.approvedUsd > 0 ? '4px' : '0'
-                }
-                title={`Approved: $${trend.approvedUsd.toFixed(2)}`}
-              />
-              <div 
-                className="bg-emerald-400/80 rounded-t"
-                style={{ 
-                  height: `${trend.paidUsd > 0 ? (trend.paidUsd / (maxValue || 1)) * 150 : 0}px`,
-                  minHeight: trend.paidUsd > 0 ? '4px' : '0'
-                }
-                title={`Paid: $${trend.paidUsd.toFixed(2)}`}
-              />
+        {trends.map((trend, index) => {
+          const claimedTitle = `Claimed: $${trend.claimedUsd.toFixed(2)}`;
+          const approvedTitle = `Approved: $${trend.approvedUsd.toFixed(2)}`;
+          const paidTitle = `Paid: $${trend.paidUsd.toFixed(2)}`;
+          return (
+            <div key={trend.month} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-[40px]">
+              <div className="w-full flex justify-center gap-1">
+                <div 
+                  className="bg-blue-500/60 rounded-t"
+                  style={{ 
+                    height: `${trend.claimedUsd > 0 ? (trend.claimedUsd / (maxValue || 1)) * 150 : 0}px`,
+                    minHeight: trend.claimedUsd > 0 ? '4px' : '0'
+                  }}
+                  title={claimedTitle}
+                />
+                <div 
+                  className="bg-emerald-500/60 rounded-t"
+                  style={{ 
+                    height: `${trend.approvedUsd > 0 ? (trend.approvedUsd / (maxValue || 1)) * 150 : 0}px`,
+                    minHeight: trend.approvedUsd > 0 ? '4px' : '0'
+                  }}
+                  title={approvedTitle}
+                />
+                <div 
+                  className="bg-emerald-400/80 rounded-t"
+                  style={{ 
+                    height: `${trend.paidUsd > 0 ? (trend.paidUsd / (maxValue || 1)) * 150 : 0}px`,
+                    minHeight: trend.paidUsd > 0 ? '4px' : '0'
+                  }}
+                  title={paidTitle}
+                />
+              </div>
+              <span className="text-[9px] font-mono text-slate-500">{formatMonthKey(trend.month)}</span>
             </div>
-            <span className="text-[9px] font-mono text-slate-500">{formatMonthKey(trend.month)}</span>
-          </div>
-          ))}
+          );
+        })}
         </div>
         <div className="flex justify-center gap-6 mt-4 text-[10px] font-mono">
           <div className="flex items-center gap-1">
