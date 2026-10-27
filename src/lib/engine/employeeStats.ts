@@ -28,20 +28,34 @@ export async function getEmployeeProfile(employeeId: string) {
   let reimbursementsPaid = 0;
   let reimbursementsPaidUsd = 0;
 
+  // Currency breakdown from expenses
+  const currencyBreakdown: Record<string, { claimed: number; claimedUsd: number; approved: number; approvedUsd: number; paid: number; paidUsd: number }> = {};
+
   for (const exp of employee.expenses) {
     const status = exp.audit?.status;
     const amount = exp.amount || 0;
     const amountUsd = exp.amountUsd ?? 0;
+    const currency = exp.currency || 'UNKNOWN';
 
     totalClaimed += amount;
     totalClaimedUsd += amountUsd;
 
+    if (!currencyBreakdown[currency]) {
+      currencyBreakdown[currency] = { claimed: 0, claimedUsd: 0, approved: 0, approvedUsd: 0, paid: 0, paidUsd: 0 };
+    }
+    currencyBreakdown[currency].claimed += amount;
+    currencyBreakdown[currency].claimedUsd += amountUsd;
+
     if (status === 'APPROVED') {
       approvedCount++;
-      totalApproved += exp.audit?.calculatedReimbursement ?? 0;
-      totalApprovedUsd += exp.audit?.calculatedReimbursementUsd ?? 0;
-      reimbursementsPaid += exp.audit?.calculatedReimbursement ?? 0;
-      reimbursementsPaidUsd += exp.audit?.calculatedReimbursementUsd ?? 0;
+      const approvedAmount = exp.audit?.calculatedReimbursement ?? 0;
+      const approvedAmountUsd = exp.audit?.calculatedReimbursementUsd ?? 0;
+      totalApproved += approvedAmount;
+      totalApprovedUsd += approvedAmountUsd;
+      reimbursementsPaid += approvedAmount;
+      reimbursementsPaidUsd += approvedAmountUsd;
+      currencyBreakdown[currency].approved += approvedAmount;
+      currencyBreakdown[currency].approvedUsd += approvedAmountUsd;
     } else if (status === 'FLAGGED') {
       flaggedCount++;
     } else if (status === 'DENIED') {
@@ -58,6 +72,10 @@ export async function getEmployeeProfile(employeeId: string) {
       totalPaidUsd += payout.totalReimbursementUsd ?? 0;
     }
   }
+
+  // Add paid amounts to currency breakdown from PAID payouts
+  // Note: Payout model doesn't store currency breakdown, so we use expense data for currency breakdown
+  // and only track paid amounts at the aggregate level
 
   const monthsReimbursed = employee.payouts.filter(p => p.totalReimbursement > 0).length;
 
@@ -83,6 +101,7 @@ export async function getEmployeeProfile(employeeId: string) {
     flaggedCount,
     deniedCount,
     monthsReimbursed,
+    currencyBreakdown,
     payouts: employee.payouts.map(p => ({
       id: p.id,
       year: p.year,

@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Star,
   Receipt,
-  IndianRupee,
   CalendarCheck2,
   ShieldCheck,
   AlertTriangle,
@@ -71,6 +70,7 @@ interface MyProfile {
   flaggedCount: number;
   deniedCount: number;
   monthsReimbursed: number;
+  currencyBreakdown: Record<string, { claimed: number; claimedUsd: number; approved: number; approvedUsd: number; paid: number; paidUsd: number }>;
   payouts: PayoutRecord[];
 }
 
@@ -125,9 +125,11 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
       bg: 'bg-blue-500/10'
     },
     {
-      label: 'Reimbursements Paid',
-      value: `${profile.tierLimitCurrency} ${profile.reimbursementsPaid.toFixed(2)} ${profile.reimbursementsPaidUsd > 0 ? `(≈$${profile.reimbursementsPaidUsd.toFixed(2)} USD)` : ''}`,
-      icon: IndianRupee,
+      label: 'Total Paid',
+      value: profile.totalPaidUsd > 0 
+        ? `$${profile.totalPaidUsd.toFixed(2)} USD` 
+        : (profile.totalPaid > 0 ? `${profile.tierLimitCurrency} ${profile.totalPaid.toFixed(2)}` : '—'),
+      icon: DollarSign,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10'
     },
@@ -258,6 +260,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
         <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
           Financial Summary
         </h3>
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white/5 border border-white/5 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -267,7 +270,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
               <div>
                 <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Claimed (USD)</span>
                 <span className="text-sm font-bold text-white">
-                  {profile.totalClaimedUsd > 0 ? formatCurrency(profile.totalClaimedUsd) : '—'}
+                  {profile.totalClaimedUsd >= 0 ? formatCurrency(profile.totalClaimedUsd) : '—'}
                 </span>
               </div>
             </div>
@@ -279,7 +282,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
                 <div>
                   <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Approved (USD)</span>
                   <span className="text-sm font-bold text-emerald-400">
-                    {profile.totalApprovedUsd > 0 ? formatCurrency(profile.totalApprovedUsd) : '—'}
+                    {profile.totalApprovedUsd >= 0 ? formatCurrency(profile.totalApprovedUsd) : '—'}
                   </span>
                 </div>
               </div>
@@ -292,7 +295,7 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
                 <div>
                   <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Paid (USD)</span>
                   <span className="text-sm font-bold text-emerald-400">
-                    {profile.totalPaidUsd > 0 ? formatCurrency(profile.totalPaidUsd) : '—'}
+                    {profile.totalPaidUsd >= 0 ? formatCurrency(profile.totalPaidUsd) : '—'}
                   </span>
                 </div>
               </div>
@@ -315,40 +318,41 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
           </div>
 
           {/* Monthly Summary */}
-          <div className="border-t border-white/5 pt-6">
+          <div className="lg:col-span-4 border-t border-white/5 pt-6">
             <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
               Monthly Claim/Payout Summary
             </h4>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead>
                   <tr className="text-left text-[10px] font-mono uppercase text-slate-500 border-b border-white/10">
-                    <th className="pb-2 pr-4">Month</th>
-                    <th className="pb-2 pr-4">Claimed (USD)</th>
-                    <th className="pb-2 pr-4">Approved (USD)</th>
-                    <th className="pb-2 pr-4">Paid (USD)</th>
-                    <th className="pb-2 pr-4">Status</th>
+                    <th className="pb-2 pr-6 whitespace-nowrap">Month</th>
+                    <th className="pb-2 pr-6 whitespace-nowrap text-right">Claimed (USD)</th>
+                    <th className="pb-2 pr-6 whitespace-nowrap text-right">Approved (USD)</th>
+                    <th className="pb-2 pr-6 whitespace-nowrap text-right">Paid (USD)</th>
+                    <th className="pb-2 pr-6 whitespace-nowrap">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {profile.payouts.slice(0, 12).map(payout => (
                     <tr key={payout.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="py-2 pr-4 font-mono text-slate-300">
+                      <td className="py-3 pr-6 font-mono text-slate-300 whitespace-nowrap">
                         {new Date(payout.year, payout.month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </td>
-                      <td className="py-2 pr-4 text-blue-400 font-mono">
+                      <td className="py-3 pr-6 text-blue-400 font-mono font-tabular-nums text-right whitespace-nowrap">
                         {payout.totalClaimedUsd != null ? formatCurrency(payout.totalClaimedUsd) : formatCurrency(payout.totalClaimed)}
                         {payout.totalClaimedUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalClaimed)})</span>}
                       </td>
-                      <td className="py-2 pr-4 text-emerald-400 font-mono">
+                      <td className="py-3 pr-6 text-emerald-400 font-mono font-tabular-nums text-right whitespace-nowrap">
                         {payout.totalReimbursementUsd != null ? formatCurrency(payout.totalReimbursementUsd) : formatCurrency(payout.totalReimbursement)}
                         {payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalReimbursement)})</span>}
                       </td>
-                      <td className="py-2 pr-4 text-emerald-400 font-mono">
-                        {payout.totalReimbursementUsd != null ? formatCurrency(payout.totalReimbursementUsd) : formatCurrency(payout.totalReimbursement)}
-                        {payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalReimbursement)})</span>}
+                      <td className="py-3 pr-6 text-emerald-400 font-mono font-tabular-nums text-right whitespace-nowrap">
+                        {payout.paidAt && payout.totalReimbursementUsd != null ? formatCurrency(payout.totalReimbursementUsd) : 
+                         payout.paidAt ? formatCurrency(payout.totalReimbursement) : '—'}
+                        {payout.paidAt && payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalReimbursement)})</span>}
                       </td>
-                      <td className="py-2 pr-4">
+                      <td className="py-3 pr-6 whitespace-nowrap">
                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
                           payout.status === 'PAID' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
                           payout.status === 'PENDING' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
@@ -373,41 +377,48 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
           </div>
 
           {/* Original Currency Breakdown */}
-          <div className="border-t border-white/5 pt-6">
+          <div className="lg:col-span-4 border-t border-white/5 pt-6">
             <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
               Original Currency Breakdown
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {Object.entries(profile.payouts.reduce((acc, payout) => {
-                const curr = 'USD'; // We don't have currency per payout in current model
-                if (!acc[curr]) acc[curr] = { claimed: 0, approved: 0, paid: 0 };
-                acc[curr].claimed += payout.totalClaimed;
-                acc[curr].approved += payout.totalReimbursement;
-                acc[curr].paid += payout.status === 'PAID' ? payout.totalReimbursement : 0;
-                return acc;
-              }, {} as Record<string, { claimed: number; approved: number; paid: number }>)).map(([currency, data]) => (
-                <div key={currency} className="bg-white/5 border border-white/5 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-mono text-slate-400 uppercase">Currency</span>
-                    <span className="font-bold text-white font-mono">{currency}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <span className="text-[10px] font-mono text-slate-500 block">Claimed</span>
-                      <span className="text-sm font-bold text-slate-300">{formatNumber(data.claimed)}</span>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <span className="text-[10px] font-mono text-slate-500 block">Approved</span>
-                      <span className="text-sm font-bold text-emerald-400">{formatNumber(data.approved)}</span>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <span className="text-[10px] font-mono text-slate-500 block">Paid</span>
-                      <span className="text-sm font-bold text-emerald-400">{formatNumber(data.paid)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {Object.keys(profile.currencyBreakdown).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px] text-sm">
+                  <thead>
+                    <tr className="text-left text-[10px] font-mono uppercase text-slate-500 border-b border-white/10">
+                      <th className="pb-2 pr-6 whitespace-nowrap">Currency</th>
+                      <th className="pb-2 pr-6 whitespace-nowrap text-right">Claimed</th>
+                      <th className="pb-2 pr-6 whitespace-nowrap text-right">Claimed (USD)</th>
+                      <th className="pb-2 pr-6 whitespace-nowrap text-right">Approved</th>
+                      <th className="pb-2 pr-6 whitespace-nowrap text-right">Approved (USD)</th>
+                      <th className="pb-2 pr-6 whitespace-nowrap text-right">Paid (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(profile.currencyBreakdown).map(([currency, data]) => (
+                      <tr key={currency} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 pr-6 font-mono font-bold text-white whitespace-nowrap">{currency}</td>
+                        <td className="py-3 pr-6 text-slate-300 font-mono font-tabular-nums text-right whitespace-nowrap">{formatNumber(data.claimed)}</td>
+                        <td className="py-3 pr-6 text-blue-400 font-mono font-tabular-nums text-right whitespace-nowrap">
+                          {data.claimedUsd > 0 ? formatCurrency(data.claimedUsd) : <span className="text-slate-500">—</span>}
+                        </td>
+                        <td className="py-3 pr-6 text-emerald-300 font-mono font-tabular-nums text-right whitespace-nowrap">{formatNumber(data.approved)}</td>
+                        <td className="py-3 pr-6 text-emerald-400 font-mono font-tabular-nums text-right whitespace-nowrap">
+                          {data.approvedUsd > 0 ? formatCurrency(data.approvedUsd) : <span className="text-slate-500">—</span>}
+                        </td>
+                        <td className="py-3 pr-6 text-emerald-400 font-mono font-tabular-nums text-right whitespace-nowrap">
+                          {data.paidUsd > 0 ? formatCurrency(data.paidUsd) : <span className="text-slate-500">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center py-4 text-slate-500 text-sm font-mono">
+                No currency breakdown data available
+              </p>
+            )}
           </div>
         </div>
       </div>
