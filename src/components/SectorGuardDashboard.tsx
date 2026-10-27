@@ -62,16 +62,14 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
             <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/5 bg-slate-900/40 backdrop-blur-xl p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-stretch shrink-0">
                 <div className="flex flex-row md:flex-col items-center md:items-stretch gap-4 md:gap-0 md:space-y-8">
                     <div className="flex items-center gap-3 px-2">
-                        <div className="w-9 h-9 rounded-xl bg-slate-800/50 border border-white/10 flex items-center justify-center shadow-md">
-                            <Image
-                                src="/logo.png"
-                                alt="Sector Guard"
-                                width={28}
-                                height={28}
-                                className="rounded-lg"
-                                priority
-                            />
-                        </div>
+                        <Image
+                            src="/logo.png"
+                            alt="Sector Guard"
+                            width={111}
+                            height={62}
+                            className="h-8 w-auto"
+                            priority
+                        />
                         <div>
                             <h2 className="font-black text-sm tracking-wider uppercase bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent">
                                 Sector Guard
@@ -175,16 +173,14 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                     <section className="flex-1 flex items-center justify-center p-8">
                         <div className="w-500 max-w-200 bg-slate-900/40 border border-white/10 rounded-3xl p-10 backdrop-blur-2xl shadow-2xl shadow-black/40 flex flex-col items-center text-center">
 
-                            <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/10 flex items-center justify-center shadow-lg shadow-black/20 mb-6">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Sector Guard"
-                                    width={48}
-                                    height={48}
-                                    className="rounded-xl"
-                                    priority
-                                />
-                            </div>
+                            <Image
+                                src="/logo.png"
+                                alt="Sector Guard"
+                                width={166}
+                                height={93}
+                                className="h-16 w-auto mb-4"
+                                priority
+                            />
 
                             <h1 className="text-2xl font-black bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent mb-2">
                                 Sector Guard

@@ -1,11 +1,102 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { 
-  DollarSign, Users, Clock, AlertTriangle, XCircle, CheckCircle2, 
-  BarChart2, TrendingUp, FileText, ArrowUpRight, ArrowDownRight,
-  ChevronLeft, ChevronRight, Calendar, Download
+  DollarSign, Users, Clock, XCircle, CheckCircle2, 
+  BarChart2, TrendingUp, FileText, 
+  ChevronLeft, ChevronDown
 } from 'lucide-react';
+
+function CustomSelect<T extends string | number>({
+  value,
+  onChange,
+  options,
+  placeholder,
+  className = '',
+  disabled = false,
+}: {
+  value: T | '';
+  onChange: (value: T | '') => void;
+  options: Array<{ value: T; label: string }>;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    }
+  }, []);
+
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleClickOutside, handleKeyDown]);
+
+  const handleOptionClick = (optionValue: T | '') => {
+    onChange(optionValue);
+    setIsOpen(false);
+  };
+
+  const selectedOption = options.find(opt => value !== '' && opt.value === value);
+  const displayValue = selectedOption?.label || placeholder || 'Select...';
+
+  return (
+    <div className={`relative inline-block ${className}`} ref={selectRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white hover:border-white/20 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-left min-w-[120px]"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="truncate">{displayValue}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto bg-slate-900 border border-white/10 rounded-lg shadow-lg shadow-black/50 animate-fadeIn">
+          <ul className="py-1" role="listbox">
+            {options.map((option) => (
+              <li key={String(option.value)} role="option" aria-selected={option.value === value}>
+                <button
+                  type="button"
+                  onClick={() => handleOptionClick(option.value)}
+                  className={`w-full px-3 py-1.5 text-xs text-left transition-colors ${
+                    option.value === value
+                      ? 'bg-blue-500/20 text-blue-300'
+                      : 'text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface CompanySummaryData {
   summary: {
@@ -67,7 +158,7 @@ function formatMonthKey(monthKey: string): string {
 const METRIC_CARDS = [
   {
     key: 'totalAmountClaimedUsd',
-    label: 'Total Amount Claimed',
+    label: 'Total Claimed',
     icon: DollarSign,
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
@@ -77,7 +168,7 @@ const METRIC_CARDS = [
   },
   {
     key: 'totalAmountApprovedUsd',
-    label: 'Total Amount Approved',
+    label: 'Total Approved',
     icon: CheckCircle2,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
@@ -87,7 +178,7 @@ const METRIC_CARDS = [
   },
   {
     key: 'totalAmountPaidUsd',
-    label: 'Total Amount Paid',
+    label: 'Total Paid',
     icon: DollarSign,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
@@ -127,38 +218,51 @@ const METRIC_CARDS = [
   }
 ];
 
+interface OriginalData {
+  totalAmountClaimed: number;
+  totalAmountApproved: number;
+  totalAmountPaid: number;
+  totalAmountClaimedUsd: number;
+  totalAmountApprovedUsd: number;
+  totalAmountPaidUsd: number;
+  pendingReviewCount: number;
+  deniedCount: number;
+  employeeCount: number;
+}
+
 function MetricCard({ data, metric, originalData }: { 
-  data: any; 
+  data: CompanySummaryData['summary']; 
   metric: typeof METRIC_CARDS[0]; 
-  originalData: any;
+  originalData: OriginalData;
 }) {
-  const value = data[metric.key];
-  const originalValue = metric.showOriginal ? originalData[metric.key.replace('Usd', '')] : null;
+  const value = data[metric.key as keyof CompanySummaryData['summary']] as number;
+  const originalKey = metric.key.replace('Usd', '') as keyof OriginalData;
+  const originalValue = metric.showOriginal ? originalData[originalKey] : null;
+  const isCount = metric.key.includes('Count') || metric.key === 'employeeCount';
+  const displayValue = isCount ? formatNumber(value) : formatCurrency(value);
   
   return (
-    <div className={`bg-white/5 border rounded-xl p-5 ${metric.bgColor} ${metric.borderColor}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <metric.icon className={`w-4 h-4 ${metric.color}`} />
-            <span className="text-xs font-mono text-slate-400 uppercase tracking-wider truncate">{metric.label}</span>
-          </div>
-          <div className="text-2xl font-black text-white truncate">
-            {metric.key.includes('Count') || metric.key === 'employeeCount' 
-              ? formatNumber(value) 
-              : formatCurrency(value)}
-          </div>
-          {originalValue && metric.showOriginal && (
-            <span className="text-xs text-slate-500 block mt-1">
-              (Original: {formatNumber(originalValue)})
-            </span>
-          )}
-          <p className="text-[10px] text-slate-500 mt-2">{metric.description}</p>
-        </div>
-        <div className={metric.color.replace('text-', 'bg-').replace('400', '500/20') + ' p-3 rounded-lg'}>
-          <metric.icon className={`w-6 h-6 ${metric.color}`} />
-        </div>
+    <div className={`bg-white/5 border rounded-xl p-5 ${metric.bgColor} ${metric.borderColor} flex flex-col`}>
+      <div className="flex items-center gap-2 mb-2">
+        <metric.icon className={`w-4 h-4 ${metric.color}`} />
+        <span className="text-xs font-mono text-slate-400 uppercase tracking-wider font-medium">{metric.label}</span>
       </div>
+      <div className="flex-1 flex flex-col justify-center min-h-[60px]">
+        <div className="text-2xl font-black text-white font-tabular-nums">
+          {displayValue}
+        </div>
+        {originalValue && metric.showOriginal && (
+          <span className="text-xs text-slate-500 block mt-1">
+            (Original: {formatNumber(originalValue)})
+          </span>
+        )}
+        {!isCount && metric.showOriginal && value === 0 && originalValue === 0 && (
+          <span className="text-xs text-slate-500 block mt-1">
+            (USD unavailable)
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] text-slate-500 mt-2">{metric.description}</p>
     </div>
   );
 }
@@ -334,24 +438,28 @@ function CurrencyBreakdown({ breakdown }: { breakdown: CurrencyBreakdownType }) 
         Currency Breakdown
       </h3>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[600px] text-sm">
           <thead>
             <tr className="text-left text-[10px] font-mono uppercase text-slate-500 border-b border-white/10">
-              <th className="pb-2 pr-4">Currency</th>
-              <th className="pb-2 pr-4">Claimed</th>
-              <th className="pb-2 pr-4">Claimed (USD)</th>
-              <th className="pb-2 pr-4">Approved</th>
-              <th className="pb-2 pr-4">Approved (USD)</th>
+              <th className="pb-2 pr-6 whitespace-nowrap">Currency</th>
+              <th className="pb-2 pr-6 whitespace-nowrap text-right">Claimed</th>
+              <th className="pb-2 pr-6 whitespace-nowrap text-right">Claimed (USD)</th>
+              <th className="pb-2 pr-6 whitespace-nowrap text-right">Approved</th>
+              <th className="pb-2 pr-6 whitespace-nowrap text-right">Approved (USD)</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(breakdown).map(([currency, data]) => (
               <tr key={currency} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                <td className="py-3 pr-4 font-mono font-bold text-white">{currency}</td>
-                <td className="py-3 pr-4 text-slate-300 font-mono">{formatNumber(data.claimed)}</td>
-                <td className="py-3 pr-4 text-blue-400 font-mono">{formatCurrency(data.claimedUsd)}</td>
-                <td className="py-3 pr-4 text-emerald-300 font-mono">{formatNumber(data.approved)}</td>
-                <td className="py-3 pr-4 text-emerald-400 font-mono">{formatCurrency(data.approvedUsd)}</td>
+                <td className="py-3 pr-6 font-mono font-bold text-white">{currency}</td>
+                <td className="py-3 pr-6 text-slate-300 font-mono font-tabular-nums text-right">{formatNumber(data.claimed)}</td>
+                <td className="py-3 pr-6 text-blue-400 font-mono font-tabular-nums text-right">
+                  {data.claimedUsd > 0 ? formatCurrency(data.claimedUsd) : <span className="text-slate-500">—</span>}
+                </td>
+                <td className="py-3 pr-6 text-emerald-300 font-mono font-tabular-nums text-right">{formatNumber(data.approved)}</td>
+                <td className="py-3 pr-6 text-emerald-400 font-mono font-tabular-nums text-right">
+                  {data.approvedUsd > 0 ? formatCurrency(data.approvedUsd) : <span className="text-slate-500">—</span>}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -431,27 +539,29 @@ export default function CompanySummary({ onBack }: CompanySummaryProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={selectedYear}
-            onChange={e => setSelectedYear(parseInt(e.target.value))}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
-          >
-            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <select
-            value={selectedMonth || ''}
-            onChange={e => setSelectedMonth(e.target.value ? parseInt(e.target.value) : undefined)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50"
-          >
-            <option value="">All Months</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-              <option key={m} value={m}>
-                {new Date(2000, m - 1).toLocaleString('default', { month: 'short' })}
-              </option>
-            ))}
-          </select>
+          <CustomSelect<string>
+            value={String(selectedYear)}
+            onChange={(v) => setSelectedYear(v ? parseInt(v) : new Date().getFullYear())}
+            options={Array.from({ length: 10 }, (_, i) => {
+              const y = new Date().getFullYear() - i;
+              return { value: String(y), label: String(y) };
+            })}
+            placeholder="Year"
+            className="min-w-[80px]"
+          />
+          <CustomSelect<string>
+            value={selectedMonth ? String(selectedMonth) : ''}
+            onChange={(v) => setSelectedMonth(v ? parseInt(v) : undefined)}
+            options={[
+              { value: '', label: 'All Months' },
+              ...Array.from({ length: 12 }, (_, i) => {
+                const m = i + 1;
+                return { value: String(m), label: new Date(2000, m - 1).toLocaleString('default', { month: 'short' }) };
+              })
+            ]}
+            placeholder="Month"
+            className="min-w-[100px]"
+          />
           <button
             onClick={() => { if (onBack) onBack(); }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:border-white/20 text-slate-200 font-semibold text-xs rounded-xl uppercase tracking-wide transition-all"
@@ -488,7 +598,7 @@ export default function CompanySummary({ onBack }: CompanySummaryProps) {
       {view === 'summary' && data && (
         <div className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {METRIC_CARDS.map(metric => (
               <MetricCard key={metric.key} data={data.summary} metric={metric} originalData={originalData} />
             ))}

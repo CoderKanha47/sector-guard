@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Binary, Shield, User } from 'lucide-react';
+import { Shield, User } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,9 +46,14 @@ export default function LoginPage() {
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-slate-900/40 border border-white/10 rounded-3xl p-10 backdrop-blur-2xl shadow-2xl shadow-black/40">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 mb-4">
-            <Binary className="text-white w-8 h-8" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Sector Guard"
+            width={166}
+            height={93}
+            className="h-16 w-auto mb-4"
+            priority
+          />
           <h1 className="text-xl font-black text-white">Sector Guard</h1>
         </div>
 
