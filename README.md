@@ -11,7 +11,7 @@ An AI-powered expense reimbursement auditing platform. Employees upload receipts
 Sector Guard automates the expense reimbursement workflow that finance teams usually handle manually:
 
 1. An employee uploads a receipt (ride, food, or accommodation)
-2. A hosted vision-language model (Groq's Llama 4 Scout) extracts structured data — merchant, amount, currency, date, category, line items — with zero manual entry
+2. A hosted vision-language model (Groq's Qwen 3.8 27B) extracts structured data — merchant, amount, currency, date, category, line items — with zero manual entry
 3. A rule-based fraud engine audits the expense against the employee's recent history, checking for policy violations, receipt-splitting fraud, and temporally impossible claims
 4. Each expense is scored, categorized (`APPROVED` / `FLAGGED` / `DENIED`), and the employee's trust rating adjusts accordingly
 5. At month-end, approved expenses are aggregated and **locked** into an immutable payout record — capped at the employee's monthly tier limit, with a category-wise (Travel / Food / Stay / Other) breakdown
