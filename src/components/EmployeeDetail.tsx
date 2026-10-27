@@ -49,6 +49,18 @@ interface EmployeeProfile {
   approvedCount: number;
   flaggedCount: number;
   deniedCount: number;
+  payouts: Array<{
+    id: string;
+    year: number;
+    month: number;
+    status: string;
+    totalClaimed: number;
+    totalClaimedUsd?: number;
+    totalReimbursement: number;
+    totalReimbursementUsd?: number;
+    expenseCount: number;
+    paidAt: string | null;
+  }>;
 }
 
 interface AuditData {

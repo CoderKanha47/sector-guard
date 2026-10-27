@@ -8,20 +8,22 @@ import {
 } from 'lucide-react';
 
 interface CompanySummaryData {
-  totalAmountClaimed: number;
-  totalAmountClaimedUsd: number;
-  totalAmountApproved: number;
-  totalAmountApprovedUsd: number;
-  totalAmountPaid: number;
-  totalAmountPaidUsd: number;
-  pendingReviewCount: number;
-  pendingReviewAmountUsd: number;
-  deniedCount: number;
-  deniedAmountUsd: number;
-  employeeCount: number;
-  currencyBreakdown: Record<string, { claimed: number; claimedUsd: number; approved: number; approvedUsd: number }>;
-  monthlyTrends: Array<{ month: string; claimed: number; claimedUsd: number; approved: number; approvedUsd: number; paid: number; paidUsd: number }>;
-  fxMetadata: { referenceDate: string; version: string; source: string; supportedCurrencies: string[] };
+  summary: {
+    totalAmountClaimed: number;
+    totalAmountClaimedUsd: number;
+    totalAmountApproved: number;
+    totalAmountApprovedUsd: number;
+    totalAmountPaid: number;
+    totalAmountPaidUsd: number;
+    pendingReviewCount: number;
+    pendingReviewAmountUsd: number;
+    deniedCount: number;
+    deniedAmountUsd: number;
+    employeeCount: number;
+    currencyBreakdown: Record<string, { claimed: number; claimedUsd: number; approved: number; approvedUsd: number }>;
+    monthlyTrends: Array<{ month: string; claimed: number; claimedUsd: number; approved: number; approvedUsd: number; paid: number; paidUsd: number }>;
+    fxMetadata: { referenceDate: string; version: string; source: string; supportedCurrencies: string[] };
+  };
   employees: Array<{
     id: string;
     name: string;
@@ -248,7 +250,10 @@ function EmployeeRatingsTable({ employees }: { employees: CompanySummaryData['em
   );
 }
 
-function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTrends'] }) {
+type MonthlyTrends = Array<{ month: string; claimed: number; claimedUsd: number; approved: number; approvedUsd: number; paid: number; paidUsd: number }>;
+type CurrencyBreakdownType = Record<string, { claimed: number; claimedUsd: number; approved: number; approvedUsd: number }>;
+
+function MonthlyTrendsChart({ trends }: { trends: MonthlyTrends }) {
   if (trends.length === 0) {
     return (
       <div className="text-center py-10 bg-white/5 border border-dashed border-white/10 rounded-xl">
@@ -322,7 +327,7 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
   );
 }
 
-function CurrencyBreakdown({ breakdown }: { breakdown: CompanySummaryData['currencyBreakdown'] }) {
+function CurrencyBreakdown({ breakdown }: { breakdown: CurrencyBreakdownType }) {
   return (
     <div className="bg-white/5 border border-white/5 rounded-xl p-6">
       <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
@@ -466,7 +471,7 @@ export default function CompanySummary({ onBack }: CompanySummaryProps) {
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => setView(tab.key)}
+            onClick={() => setView(tab.key as 'summary' | 'employees' | 'trends' | 'currency')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border transition-all ${
               view === tab.key
                 ? 'bg-white/10 border-white/20 text-white shadow-md'
@@ -522,10 +527,3 @@ export default function CompanySummary({ onBack }: CompanySummaryProps) {
     </div>
   );
 }
-
-import { useState, useEffect } from 'react';
-import { formatCurrency, formatNumber, formatMonthKey } from './CompanySummary';
-
-// Re-export the helper functions and components
-export { formatCurrency, formatNumber, formatMonthKey };
-export { MetricCard, EmployeeRatingsTable, MonthlyTrendsChart, CurrencyBreakdown };
