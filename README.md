@@ -1,4 +1,4 @@
-# Sector Guard v1.3
+# Sector Guard v1.5
 
 An AI-powered expense reimbursement auditing platform. Employees upload receipts, a hosted vision-language model extracts the data automatically, and a rule-based fraud engine catches policy violations before finance ever sees them.
 
@@ -34,6 +34,9 @@ Sector Guard automates the expense reimbursement workflow that finance teams usu
   - Category breakdown (Travel / Food / Stay / Other) per payout period
 - **Batch receipt upload** — process multiple receipts sequentially in one go
 - **Responsive UI** — glassmorphic design, works on desktop and mobile
+- **Company Summary dashboard (Admin)** — company-wide financial overview with summary cards (Total Claimed, Approved, Paid, Pending Review, Denied Claims, Active Employees), employee ratings table with sortable columns, and monthly financial trends chart
+- **Employee-level financial summary** — per-employee breakdown of claimed, approved, and paid amounts (USD-normalized), monthly claim/payout history, and original currency breakdown
+- **Increased daily upload limit** — 29 receipts per day (up from 27) with server-side enforcement and race-condition protection
 
 ---
 
@@ -167,13 +170,21 @@ src/
 │       ├── employees/[id]/route.ts   # Get / update / delete employee
 │       ├── employees/[id]/receipts/route.ts  # Employee receipt folders + payouts
 │       ├── payouts/close/route.ts # Close a monthly payout
+│       ├── admin/company-summary/route.ts  # Company-wide financial summary (admin only)
 │       └── usage/route.ts
 ├── components/
 │   ├── EmployeeList.tsx
 │   ├── EmployeeDetail.tsx
+│   ├── EmployeeRecords.tsx
+│   ├── CompanySummary.tsx
 │   ├── AddEmployeeModal.tsx
 │   ├── AboutModal.tsx
-│   └── AnomalyCard.tsx
+│   ├── AnomalyCard.tsx
+│   ├── ReceiptFolders.tsx
+│   ├── AuditReasonModal.tsx
+│   ├── EmployeeAccessCodesView.tsx
+│   ├── SectorGuardDashboard.tsx
+│   └── UsageIndicator.tsx
 ├── lib/
 │   ├── prisma.ts                 # Shared Prisma client
 │   ├── auth.ts                   # Session token helpers
@@ -181,11 +192,15 @@ src/
 │   ├── rateLimiter.ts
 │   ├── ai/promptEngine.ts        # Groq vision extraction
 │   ├── ai/validateReceipt.ts
+│   ├── currency/
+│   │   ├── converter.ts          # FX conversion logic
+│   │   ├── fixedRates.ts         # Fixed FX rate table
+│   │   └── fixedRates.js         # Runtime FX rates
 │   └── engine/
 │       ├── fraudCore.ts          # Fraud detection + risk scoring
 │       ├── fraudRules.ts         # Rule definitions
-│       ├── employeeStats.ts     # Employee profile / summary queries
-│       └── payoutEngine.ts      # Monthly payout close logic
+│       ├── employeeStats.ts      # Employee profile / summary queries
+│       └── payoutEngine.ts       # Monthly payout close logic
 └── prisma/
     └── schema.prisma
 ```
@@ -195,11 +210,13 @@ src/
 ## Known Limitations
 
 - Fraud detection rules are per-transaction and merchant/time-window based; no monthly aggregate anomaly detection beyond the payout cap
-- Automated tests are limited to a fraud-rules eval harness (`tests/fraudRules.test.mjs`), currency conversion tests (`tests/currency.test.mjs`), and conversion status tests (`tests/conversionStatus.test.mjs`); no end-to-end test suite
+- Automated tests cover fraud rules, currency conversion, conversion status, rate limiting, and company summary API; no end-to-end test suite
 - Category mapping (Travel / Food / Stay / Other) is a fixed lookup, not configurable per organization
 - FX provider requires `FX_API_KEY` environment variable; without it, non-USD receipts are marked `PENDING_REVIEW` and denied
 - Hardcoded fallback FX rates have been removed; live provider or manual review is required
 - PENDING_REVIEW conversion status forces expense denial; manual admin review workflow not yet automated
+- Actual payment tracking relies on `MonthlyPayout.paidAt` timestamp; if payouts are marked PAID without setting `paidAt`, paid totals will be underreported
+- Employee trust rating is a simple heuristic (starts at 100, adjusted by audit outcomes); not a formal fraud-risk score
 
 ---
 

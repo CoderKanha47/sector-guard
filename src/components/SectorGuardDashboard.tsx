@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Home, Users, FolderOpen, Binary, BookOpen, ChevronRight, Key } from 'lucide-react';
+import { Home, Users, FolderOpen, BookOpen, ChevronRight, Key, BarChart2 } from 'lucide-react';
 import EmployeeList from '@/components/EmployeeList';
 import EmployeeDetail from '@/components/EmployeeDetail';
 import EmployeeRecords from '@/components/EmployeeRecords';
 import EmployeeAccessCodesView from '@/components/EmployeeAccessCodesView';
+import CompanySummary from '@/components/CompanySummary';
 import AboutModal from '@/components/AboutModal';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import UsageIndicator from './UsageIndicator';
+import Image from 'next/image';
 
 interface SectorGuardDashboardProps {
     role: 'admin' | 'employee';
@@ -19,14 +21,14 @@ interface SectorGuardDashboardProps {
 
 export default function SectorGuardDashboard({ role, userName, employeeId }: SectorGuardDashboardProps) {
     const isAdmin = role === 'admin';
-    const [activeTab, setActiveTab] = useState<'home' | 'employees' | 'records' | 'access-codes'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'employees' | 'records' | 'access-codes' | 'company-summary'>('home');
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [showAbout, setShowAbout] = useState(false);
     const [usageLive, setUsageLive] = useState<{ used: number; limit: number } | null>(null);
 
     const handleUsageChange = (usage: { used: number; limit: number }) => setUsageLive(usage);
 
-    const handleTabChange = (tab: 'home' | 'employees' | 'records' | 'access-codes') => {
+    const handleTabChange = (tab: 'home' | 'employees' | 'records' | 'access-codes' | 'company-summary') => {
         setActiveTab(tab);
         if (tab !== 'employees') {
             setSelectedEmployeeId(null);
@@ -60,14 +62,21 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
             <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/5 bg-slate-900/40 backdrop-blur-xl p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-stretch shrink-0">
                 <div className="flex flex-row md:flex-col items-center md:items-stretch gap-4 md:gap-0 md:space-y-8">
                     <div className="flex items-center gap-3 px-2">
-                        <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
-                            <Binary className="text-white w-5 h-5" />
+                        <div className="w-9 h-9 rounded-xl bg-slate-800/50 border border-white/10 flex items-center justify-center shadow-md">
+                            <Image
+                                src="/logo.png"
+                                alt="Sector Guard"
+                                width={28}
+                                height={28}
+                                className="rounded-lg"
+                                priority
+                            />
                         </div>
                         <div>
                             <h2 className="font-black text-sm tracking-wider uppercase bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent">
                                 Sector Guard
                             </h2>
-                            <span className="text-[10px] font-mono opacity-40">v1.4 // {role.toUpperCase()}</span>
+                            <span className="text-[10px] font-mono opacity-40">v1.5 // {role.toUpperCase()}</span>
                         </div>
                     </div>
 
@@ -104,6 +113,16 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                                 >
                                     <Key className="w-4 h-4" />
                                     <span>Access Codes</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTabChange('company-summary')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-full border transition-all duration-200 ${activeTab === 'company-summary'
+                                        ? 'bg-white/10 border-white/20 text-white shadow-md'
+                                        : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                                        }`}
+                                >
+                                    <BarChart2 className="w-4 h-4" />
+                                    <span>Company Summary</span>
                                 </button>
                             </>
                         ) : (
@@ -156,8 +175,15 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                     <section className="flex-1 flex items-center justify-center p-8">
                         <div className="w-500 max-w-200 bg-slate-900/40 border border-white/10 rounded-3xl p-10 backdrop-blur-2xl shadow-2xl shadow-black/40 flex flex-col items-center text-center">
 
-                            <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 mb-6">
-                                <Binary className="text-white w-8 h-8" />
+                            <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/10 flex items-center justify-center shadow-lg shadow-black/20 mb-6">
+                                <Image
+                                    src="/logo.png"
+                                    alt="Sector Guard"
+                                    width={48}
+                                    height={48}
+                                    className="rounded-xl"
+                                    priority
+                                />
                             </div>
 
                             <h1 className="text-2xl font-black bg-linear-to-r from-white to-slate-400 bg-clip-text text-transparent mb-2">
@@ -219,6 +245,10 @@ export default function SectorGuardDashboard({ role, userName, employeeId }: Sec
                             </h3>
                         </header>
                         <EmployeeAccessCodesView />
+                    </section>
+                ) : activeTab === 'company-summary' && isAdmin ? (
+                    <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
+                        <CompanySummary onBack={() => handleTabChange('employees')} />
                     </section>
                 ) : (
                     <section className="bg-slate-900/30 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">

@@ -12,9 +12,25 @@ import {
   Briefcase,
   MapPin,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  DollarSign,
+  Clock,
+  DollarSign as DollarSignIcon
 } from 'lucide-react';
 import ReceiptFolders from './ReceiptFolders';
+
+function formatCurrency(amount: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}
+
+function formatNumber(num: number): string {
+  return new Intl.NumberFormat('en-US').format(num);
+}
 
 interface EmployeeRecordsProps {
   employeeId: string;
@@ -43,6 +59,12 @@ interface MyProfile {
   tierLimitCurrency: string;
   rating: number;
   billsUploaded: number;
+  totalClaimed: number;
+  totalClaimedUsd: number;
+  totalApproved: number;
+  totalApprovedUsd: number;
+  totalPaid: number;
+  totalPaidUsd: number;
   reimbursementsPaid: number;
   reimbursementsPaidUsd: number;
   approvedCount: number;
@@ -231,7 +253,166 @@ export default function EmployeeRecords({ employeeId }: EmployeeRecordsProps) {
         </div>
       )}
 
-{/* RECEIPT FOLDERS */}
+      {/* FINANCIAL SUMMARY */}
+      <div className="bg-white/5 border border-white/5 rounded-xl p-6">
+        <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
+          Financial Summary
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                <DollarSignIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Claimed (USD)</span>
+                <span className="text-sm font-bold text-white">
+                  {profile.totalClaimedUsd > 0 ? formatCurrency(profile.totalClaimedUsd) : '—'}
+                </span>
+              </div>
+            </div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Approved (USD)</span>
+                  <span className="text-sm font-bold text-emerald-400">
+                    {profile.totalApprovedUsd > 0 ? formatCurrency(profile.totalApprovedUsd) : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                  <DollarSignIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Paid (USD)</span>
+                  <span className="text-sm font-bold text-emerald-400">
+                    {profile.totalPaidUsd > 0 ? formatCurrency(profile.totalPaidUsd) : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-slate-500 uppercase block">Pending Review</span>
+                  <span className="text-sm font-bold text-amber-400">
+                    {profile.billsUploaded > profile.approvedCount + profile.deniedCount 
+                      ? profile.billsUploaded - profile.approvedCount - profile.deniedCount 
+                      : 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Summary */}
+          <div className="border-t border-white/5 pt-6">
+            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
+              Monthly Claim/Payout Summary
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[10px] font-mono uppercase text-slate-500 border-b border-white/10">
+                    <th className="pb-2 pr-4">Month</th>
+                    <th className="pb-2 pr-4">Claimed (USD)</th>
+                    <th className="pb-2 pr-4">Approved (USD)</th>
+                    <th className="pb-2 pr-4">Paid (USD)</th>
+                    <th className="pb-2 pr-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.payouts.slice(0, 12).map(payout => (
+                    <tr key={payout.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                      <td className="py-2 pr-4 font-mono text-slate-300">
+                        {new Date(payout.year, payout.month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="py-2 pr-4 text-blue-400 font-mono">
+                        {payout.totalClaimedUsd != null ? formatCurrency(payout.totalClaimedUsd) : formatCurrency(payout.totalClaimed)}
+                        {payout.totalClaimedUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalClaimed)})</span>}
+                      </td>
+                      <td className="py-2 pr-4 text-emerald-400 font-mono">
+                        {payout.totalReimbursementUsd != null ? formatCurrency(payout.totalReimbursementUsd) : formatCurrency(payout.totalReimbursement)}
+                        {payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalReimbursement)})</span>}
+                      </td>
+                      <td className="py-2 pr-4 text-emerald-400 font-mono">
+                        {payout.totalReimbursementUsd != null ? formatCurrency(payout.totalReimbursementUsd) : formatCurrency(payout.totalReimbursement)}
+                        {payout.totalReimbursementUsd != null && <span className="text-slate-400 ml-1 text-[10px]">(orig: {formatNumber(payout.totalReimbursement)})</span>}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                          payout.status === 'PAID' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                          payout.status === 'PENDING' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                          'bg-slate-500/10 border-slate-500/30 text-slate-400'
+                        }`}>
+                          {payout.status}
+                          {payout.paidAt && <span className="ml-1">✓</span>}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {profile.payouts.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-slate-500 text-sm font-mono">
+                        No monthly payout data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Original Currency Breakdown */}
+          <div className="border-t border-white/5 pt-6">
+            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
+              Original Currency Breakdown
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Object.entries(profile.payouts.reduce((acc, payout) => {
+                const curr = 'USD'; // We don't have currency per payout in current model
+                if (!acc[curr]) acc[curr] = { claimed: 0, approved: 0, paid: 0 };
+                acc[curr].claimed += payout.totalClaimed;
+                acc[curr].approved += payout.totalReimbursement;
+                acc[curr].paid += payout.status === 'PAID' ? payout.totalReimbursement : 0;
+                return acc;
+              }, {} as Record<string, { claimed: number; approved: number; paid: number }>)).map(([currency, data]) => (
+                <div key={currency} className="bg-white/5 border border-white/5 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-mono text-slate-400 uppercase">Currency</span>
+                    <span className="font-bold text-white font-mono">{currency}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <span className="text-[10px] font-mono text-slate-500 block">Claimed</span>
+                      <span className="text-sm font-bold text-slate-300">{formatNumber(data.claimed)}</span>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <span className="text-[10px] font-mono text-slate-500 block">Approved</span>
+                      <span className="text-sm font-bold text-emerald-400">{formatNumber(data.approved)}</span>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <span className="text-[10px] font-mono text-slate-500 block">Paid</span>
+                      <span className="text-sm font-bold text-emerald-400">{formatNumber(data.paid)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* RECEIPT FOLDERS */}
       <div className="bg-white/5 border border-white/5 rounded-xl p-6">
         <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 font-bold mb-4">
           My Receipt Folders — organised by year & month

@@ -21,19 +21,41 @@ export async function getEmployeeProfile(employeeId: string) {
   let approvedCount = 0;
   let flaggedCount = 0;
   let deniedCount = 0;
+  let totalClaimed = 0;
+  let totalClaimedUsd = 0;
+  let totalApproved = 0;
+  let totalApprovedUsd = 0;
   let reimbursementsPaid = 0;
   let reimbursementsPaidUsd = 0;
 
   for (const exp of employee.expenses) {
     const status = exp.audit?.status;
+    const amount = exp.amount || 0;
+    const amountUsd = exp.amountUsd ?? 0;
+
+    totalClaimed += amount;
+    totalClaimedUsd += amountUsd;
+
     if (status === 'APPROVED') {
       approvedCount++;
+      totalApproved += exp.audit?.calculatedReimbursement ?? 0;
+      totalApprovedUsd += exp.audit?.calculatedReimbursementUsd ?? 0;
       reimbursementsPaid += exp.audit?.calculatedReimbursement ?? 0;
       reimbursementsPaidUsd += exp.audit?.calculatedReimbursementUsd ?? 0;
     } else if (status === 'FLAGGED') {
       flaggedCount++;
     } else if (status === 'DENIED') {
       deniedCount++;
+    }
+  }
+
+  // Calculate actual paid amounts from payouts with PAID status
+  let totalPaid = 0;
+  let totalPaidUsd = 0;
+  for (const payout of employee.payouts) {
+    if (payout.status === 'PAID' && payout.paidAt) {
+      totalPaid += payout.totalReimbursement;
+      totalPaidUsd += payout.totalReimbursementUsd ?? 0;
     }
   }
 
@@ -49,6 +71,12 @@ export async function getEmployeeProfile(employeeId: string) {
     tierLimitCurrency: (employee as any).tierLimitCurrency ?? 'INR',
     rating: employee.rating,
     billsUploaded,
+    totalClaimed,
+    totalClaimedUsd,
+    totalApproved,
+    totalApprovedUsd,
+    totalPaid,
+    totalPaidUsd,
     reimbursementsPaid,
     reimbursementsPaidUsd,
     approvedCount,

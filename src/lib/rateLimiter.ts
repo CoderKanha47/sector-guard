@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 
-export const DAILY_LIMIT = 27;
-export const WARNING_THRESHOLD = 25;
+export const DAILY_LIMIT = 29;
+export const WARNING_THRESHOLD = 27;
 
 function getTodayKey(): string {
   return new Date().toISOString().split('T')[0];
