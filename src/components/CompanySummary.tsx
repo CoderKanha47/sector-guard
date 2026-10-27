@@ -259,9 +259,42 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
     );
   }
 
-  // Find max value for scaling
   const maxValue = Math.max(...trends.flatMap(t => [t.claimedUsd, t.approvedUsd, t.paidUsd]));
-  const chartHeight = 200;
+
+  const chartBars = trends.map((trend) => {
+    const claimedTitle = `Claimed: $${trend.claimedUsd.toFixed(2)}`;
+    const approvedTitle = `Approved: $${trend.approvedUsd.toFixed(2)}`;
+    const paidTitle = `Paid: $${trend.paidUsd.toFixed(2)}`;
+    const claimedHeight = trend.claimedUsd > 0 ? (trend.claimedUsd / (maxValue || 1)) * 150 : 0;
+    const approvedHeight = trend.approvedUsd > 0 ? (trend.approvedUsd / (maxValue || 1)) * 150 : 0;
+    const paidHeight = trend.paidUsd > 0 ? (trend.paidUsd / (maxValue || 1)) * 150 : 0;
+    const claimedMinHeight = trend.claimedUsd > 0 ? '4px' : '0';
+    const approvedMinHeight = trend.approvedUsd > 0 ? '4px' : '0';
+    const paidMinHeight = trend.paidUsd > 0 ? '4px' : '0';
+
+    return (
+      <div key={trend.month} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-[40px]">
+        <div className="w-full flex justify-center gap-1">
+          <div
+            className="bg-blue-500/60 rounded-t"
+            style={{ height: `${claimedHeight}px`, minHeight: claimedMinHeight }}
+            title={claimedTitle}
+          />
+          <div
+            className="bg-emerald-500/60 rounded-t"
+            style={{ height: `${approvedHeight}px`, minHeight: approvedMinHeight }}
+            title={approvedTitle}
+          />
+          <div
+            className="bg-emerald-400/80 rounded-t"
+            style={{ height: `${paidHeight}px`, minHeight: paidMinHeight }}
+            title={paidTitle}
+          />
+        </div>
+        <span className="text-[9px] font-mono text-slate-500">{formatMonthKey(trend.month)}</span>
+      </div>
+    );
+  });
 
   return (
     <div className="bg-white/5 border border-white/5 rounded-xl p-6">
@@ -269,43 +302,7 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
         Monthly Financial Trends (USD)
       </h3>
       <div className="flex items-end justify-between h-[200px] gap-2">
-        {trends.map((trend, index) => {
-          const claimedTitle = `Claimed: $${trend.claimedUsd.toFixed(2)}`;
-          const approvedTitle = `Approved: $${trend.approvedUsd.toFixed(2)}`;
-          const paidTitle = `Paid: $${trend.paidUsd.toFixed(2)}`;
-          return (
-            <div key={trend.month} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-[40px]">
-              <div className="w-full flex justify-center gap-1">
-                <div 
-                  className="bg-blue-500/60 rounded-t"
-                  style={{ 
-                    height: `${trend.claimedUsd > 0 ? (trend.claimedUsd / (maxValue || 1)) * 150 : 0}px`,
-                    minHeight: trend.claimedUsd > 0 ? '4px' : '0'
-                  }}
-                  title={claimedTitle}
-                />
-                <div 
-                  className="bg-emerald-500/60 rounded-t"
-                  style={{ 
-                    height: `${trend.approvedUsd > 0 ? (trend.approvedUsd / (maxValue || 1)) * 150 : 0}px`,
-                    minHeight: trend.approvedUsd > 0 ? '4px' : '0'
-                  }}
-                  title={approvedTitle}
-                />
-                <div 
-                  className="bg-emerald-400/80 rounded-t"
-                  style={{ 
-                    height: `${trend.paidUsd > 0 ? (trend.paidUsd / (maxValue || 1)) * 150 : 0}px`,
-                    minHeight: trend.paidUsd > 0 ? '4px' : '0'
-                  }}
-                  title={paidTitle}
-                />
-              </div>
-              <span className="text-[9px] font-mono text-slate-500">{formatMonthKey(trend.month)}</span>
-            </div>
-          );
-        })}
-        </div>
+        {chartBars}
         <div className="flex justify-center gap-6 mt-4 text-[10px] font-mono">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 bg-blue-500/60 rounded" />
@@ -321,6 +318,7 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
           </div>
         </div>
       </div>
+    </div>
   );
 }
 
