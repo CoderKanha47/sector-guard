@@ -321,7 +321,6 @@ function MonthlyTrendsChart({ trends }: { trends: CompanySummaryData['monthlyTre
           </div>
         </div>
       </div>
-    </div>
   );
 }
 
